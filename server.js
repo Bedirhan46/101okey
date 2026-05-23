@@ -150,25 +150,31 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoomCode];
     if (!room) return;
 
-    // Merge with previous gameState to preserve hidden hands of other players
-    if (room.gameState && gameState.hands) {
-      for (let i = 0; i < 4; i++) {
-        if (i !== currentSeatIndex) {
-          if (gameState.hands[i]) {
-            gameState.hands[i] = gameState.hands[i].map((t, idx) => {
-              const cachedHand = room.gameState.hands[i];
-              if (t && t.hidden && cachedHand && cachedHand[idx]) {
-                return cachedHand[idx];
-              }
-              return t;
-            });
+    // Merge with previous gameState to preserve hands of other players
+    if (room.gameState) {
+      if (gameState.hands) {
+        for (let i = 0; i < 4; i++) {
+          if (i !== currentSeatIndex) {
+            if (gameState.hands[i]) {
+              gameState.hands[i] = gameState.hands[i].map((t, idx) => {
+                const cachedHand = room.gameState.hands[i];
+                if (t && t.hidden && cachedHand && cachedHand[idx]) {
+                  return cachedHand[idx];
+                }
+                return t;
+              });
+            } else {
+              gameState.hands[i] = room.gameState.hands[i];
+            }
           }
         }
       }
-    }
-    // Also preserve botHands for non-host
-    if (currentSeatIndex !== 0 && room.gameState && gameState.botHands) {
-      gameState.botHands = room.gameState.botHands;
+      // Also preserve botHands if not provided or if updated by non-host
+      if (!gameState.botHands && room.gameState.botHands) {
+        gameState.botHands = room.gameState.botHands;
+      } else if (currentSeatIndex !== 0 && room.gameState.botHands) {
+        gameState.botHands = room.gameState.botHands;
+      }
     }
 
     // Update server side gameState cache

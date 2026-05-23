@@ -188,12 +188,23 @@ function dealTiles() {
     rackSlots[i] = dealt[i];
   }
 
-  // Deal 21 tiles to each of the 3 bots
-  botHands = [
-    deck.splice(0, 21),
-    deck.splice(0, 21),
-    deck.splice(0, 21)
-  ];
+  // Deal 21 tiles to each of the other 3 seats depending on if they are bots or humans
+  botHands = [null, null, null];
+  const initialHands = [null, null, null, null];
+  initialHands[0] = rackSlots;
+
+  for (let i = 1; i <= 3; i++) {
+    const isBot = isSeatBot(i);
+    const tiles = deck.splice(0, 21);
+    if (isBot) {
+      botHands[i - 1] = tiles;
+    } else {
+      initialHands[i] = Array(40).fill(null);
+      for (let j = 0; j < tiles.length; j++) {
+        initialHands[i][j] = tiles[j];
+      }
+    }
+  }
 
   // Set initial scores
   document.getElementById("p1-score-badge").textContent = "0";
@@ -201,7 +212,7 @@ function dealTiles() {
   document.getElementById("p3-score-badge").textContent = "0";
 
   if (socket && myRoomCode && mySeatIndex === 0) {
-    uploadGameState();
+    uploadGameState(initialHands);
   }
 
   updateTurnHighlight();
@@ -2937,11 +2948,19 @@ function initTouchDrag() {
 // ──────────────────────────────────────────────
 //  SOCKET.IO MULTIPLAYER ACTIONS & LISTENERS
 // ──────────────────────────────────────────────
-function uploadGameState() {
+function uploadGameState(initialHands = null) {
   if (!socket || !myRoomCode) return;
 
   const hands = [null, null, null, null];
   hands[mySeatIndex] = rackSlots;
+
+  if (initialHands) {
+    for (let i = 0; i < 4; i++) {
+      if (initialHands[i]) {
+        hands[i] = initialHands[i];
+      }
+    }
+  }
 
   // Read our local variables and set them in the server seat arrays
   // For other seats, we keep their values from the last received server state so we don't lose them!
@@ -3071,6 +3090,7 @@ function initSocket() {
   socket.on('room_update', ({ players, gameStarted }) => {
     playersInfo = players;
     updateLobbySeats();
+    updateVisualPlayerNames();
   });
 
   socket.on('game_started', ({ players }) => {
@@ -3130,9 +3150,37 @@ function updateVisualPlayerNames() {
   for (let v = 0; v < 4; v++) {
     let i = (v + mySeatIndex) % 4;
     const player = playersInfo.find(p => p.seatIndex === i);
+    
+    // Update player box in the sidebar
     const row = document.getElementById(`p${v}-row`);
     if (row && player) {
       row.querySelector('.player-name').textContent = player.name;
+    }
+
+    // Update discard zone title
+    const discardZone = document.getElementById(`discard-zone-p${v}`);
+    if (discardZone && player) {
+      const titleEl = discardZone.querySelector('.discard-zone-title');
+      if (titleEl) {
+        if (v === 0) {
+          titleEl.textContent = `${player.name.toUpperCase()} (SENİN ATILANLAR)`;
+        } else {
+          titleEl.textContent = `${player.name.toUpperCase()} - ATILANLAR`;
+        }
+      }
+    }
+  }
+
+  // Update absolute seat index labels in the scoreboard dropdown
+  for (let i = 0; i < 4; i++) {
+    const player = playersInfo.find(p => p.seatIndex === i);
+    const lblEl = document.getElementById(`score-lbl-p${i}`);
+    if (lblEl && player) {
+      if (i === mySeatIndex) {
+        lblEl.textContent = `${player.name.toUpperCase()} (SEN):`;
+      } else {
+        lblEl.textContent = `${player.name.toUpperCase()}:`;
+      }
     }
   }
 }
