@@ -2350,6 +2350,7 @@ function sortSeries() {
   rackSlots = sortedSlots.slice(0, 40);
   selectedIndex = null;
   updateAll("Seri dizilimi yapıldı.");
+  uploadGameState();
 }
 
 /**
@@ -2415,6 +2416,7 @@ function sortPairs() {
   rackSlots = sortedSlots.slice(0, 40);
   selectedIndex = null;
   updateAll("Çift dizilimi yapıldı.");
+  uploadGameState();
 }
 
 /**
