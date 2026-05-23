@@ -2447,7 +2447,7 @@ function showMessage(text) {
  */
 function getCalculatedDeckCount() {
   let playerHandCount = rackSlots.filter(t => t !== null).length;
-  let botHandsCount = botHands.reduce((sum, h) => sum + h.length, 0);
+  let botHandsCount = botHands.reduce((sum, h) => sum + (h ? h.length : 0), 0);
   let discardsCount = discardPiles.reduce((sum, p) => sum + p.length, 0);
   let openedCount = openedGroups.reduce((sum, g) => sum + g.tiles.length, 0);
   let indicatorCount = okeyTileInfo ? 1 : 0;
