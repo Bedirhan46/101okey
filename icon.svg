@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b2636" />
+      <stop offset="100%" stop-color="#0d1522" />
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe082" />
+      <stop offset="100%" stop-color="#ffd700" />
+    </linearGradient>
+    <linearGradient id="tileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e0e0e0" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="url(#borderGrad)" stroke-width="12" />
+  
+  <!-- Okey Tile Graphic -->
+  <g transform="translate(156, 96)">
+    <!-- The Tile Body -->
+    <rect width="200" height="280" rx="24" fill="url(#tileGrad)" stroke="#baa687" stroke-width="4" />
+    
+    <!-- Red Number 101 -->
+    <text x="100" y="150" font-family="'Outfit', sans-serif" font-weight="900" font-size="72" fill="#d32f2f" text-anchor="middle">101</text>
+    
+    <!-- Red dot beneath -->
+    <circle cx="100" cy="210" r="16" fill="#d32f2f" />
+  </g>
+</svg>

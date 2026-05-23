@@ -1,0 +1,18 @@
+{
+  "name": "101 Okey Gelişmiş",
+  "short_name": "101 Okey",
+  "description": "Gelişmiş 101 Okey Online Oyunu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1611",
+  "theme_color": "#0d1522",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

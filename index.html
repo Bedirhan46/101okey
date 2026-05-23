@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>101 Okey Geliştirilmiş</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=32">
+    <!-- PWA Manifest & Service Worker -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0d1522">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('Service Worker registered', reg))
+            .catch(err => console.log('Service Worker registration failed', err));
+        });
+      }
+    </script>
+
+    <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.background = '#ffebee';
+      div.style.color = '#c62828';
+      div.style.borderBottom = '3px solid #b71c1c';
+      div.style.zIndex = '99999';
+      div.style.padding = '15px';
+      div.style.fontSize = '14px';
+      div.style.fontFamily = 'monospace';
+      div.style.whiteSpace = 'pre-wrap';
+      div.innerHTML = '<strong>JS ERROR:</strong> ' + message + '<br>Source: ' + source + ':' + lineno + ':' + colno + (error ? '<br>Stack: ' + error.stack : '');
+      document.body.appendChild(div);
+      return false;
+    };
+    </script>
+</head>
+<body>
+
+<div class="game">
+
+  <!-- Lobby Overlay (Multiplayer Lobby) -->
+  <div id="lobby-overlay" class="lobby-container">
+    <div class="lobby-content">
+      <h1 class="lobby-title">101 OKEY MULTIPLAYER</h1>
+      
+      <!-- Screen 1: Enter Name & Choose Action -->
+      <div id="lobby-screen-join" class="lobby-screen">
+        <div id="file-protocol-warning" class="lobby-warning" style="display: none;">
+          ⚠️ Oyunu doğrudan dosya olarak açtınız. Online oynamak için tarayıcıda http://localhost:8080/ adresine gidin.
+        </div>
+        <div class="input-group">
+          <label for="player-nickname">Kullanıcı Adınız</label>
+          <input type="text" id="player-nickname" placeholder="Takma adınızı girin..." maxlength="15">
+        </div>
+        <div class="lobby-actions">
+          <button id="btn-create-room" class="btn-lobby primary" onclick="socketCreateRoom()">Yeni Oda Kur</button>
+          <div class="divider"><span>veya</span></div>
+          <div class="input-group">
+            <label for="room-code-input">Oda Kodu</label>
+            <input type="text" id="room-code-input" placeholder="Oda kodunu girin..." maxlength="5" style="text-transform: uppercase;">
+          </div>
+          <button id="btn-join-room" class="btn-lobby secondary" onclick="socketJoinRoom()">Odaya Katıl</button>
+          <div class="divider"><span>veya</span></div>
+          <button id="btn-play-offline" class="btn-lobby offline-btn" onclick="playOffline()">Çevrimdışı / Sandbox Oyna</button>
+        </div>
+      </div>
+
+      <!-- Screen 2: Waiting Lobby -->
+      <div id="lobby-screen-wait" class="lobby-screen" style="display: none;">
+        <div class="room-code-display">
+          <span class="code-lbl">ODA KODU:</span>
+          <span id="lobby-room-code" class="code-val">-</span>
+        </div>
+        
+        <div class="lobby-seats-container">
+          <h3>Oyuncular</h3>
+          <div class="lobby-seats">
+            <div class="lobby-seat" id="seat-0">
+              <span class="seat-avatar">🧑</span>
+              <span class="seat-name">SEN</span>
+              <span class="seat-status host">Oda Kurucusu</span>
+            </div>
+            <div class="lobby-seat empty" id="seat-1">
+              <span class="seat-avatar">🤖</span>
+              <span class="seat-name">Boş / Bot</span>
+              <span class="seat-status">Bekliyor...</span>
+            </div>
+            <div class="lobby-seat empty" id="seat-2">
+              <span class="seat-avatar">🤖</span>
+              <span class="seat-name">Boş / Bot</span>
+              <span class="seat-status">Bekliyor...</span>
+            </div>
+            <div class="lobby-seat empty" id="seat-3">
+              <span class="seat-avatar">🤖</span>
+              <span class="seat-name">Boş / Bot</span>
+              <span class="seat-status">Bekliyor...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lobby-footer">
+          <button id="btn-start-game" class="btn-lobby primary" onclick="socketStartGame()" style="display: none;">Oyunu Başlat</button>
+          <div id="wait-message" class="wait-text">Diğer oyuncuların katılması bekleniyor...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Row Info Area -->
+  <div class="top-row">
+    <!-- Players List (Top Left) -->
+    <div class="players-box">
+      <div class="box-title">OYUNCULAR</div>
+      <div class="player-item active-player" id="p0-row">
+        <span class="player-name">SEN</span>
+        <span class="player-score" id="p0-score-badge">0</span>
+      </div>
+      <div class="player-item" id="p1-row">
+        <span class="player-name">AHMET</span>
+        <span class="player-score" id="p1-score-badge">0</span>
+      </div>
+      <div class="player-item" id="p2-row">
+        <span class="player-name">MEHMET</span>
+        <span class="player-score" id="p2-score-badge">0</span>
+      </div>
+      <div class="player-item" id="p3-row">
+        <span class="player-name">AYŞE</span>
+        <span class="player-score" id="p3-score-badge">0</span>
+      </div>
+    </div>
+
+    <!-- Center Logo Header -->
+    <div class="logo-header">
+      <div class="logo-top">101</div>
+      <div class="logo-bottom">OKEY</div>
+    </div>
+
+    <!-- Stats & Okey Info (Top Right) -->
+    <div class="right-stats-box">
+      <div class="round-box score-dropdown-box" id="score-dropdown" onclick="toggleScoreDropdown(event)">
+        <div class="stat-lbl" style="margin-bottom: 0;">PUAN DURUMU</div>
+        <div class="score-dropdown-content" id="score-dropdown-menu">
+          <div class="score-dropdown-item">
+            <span class="player-lbl self">SEN:</span>
+            <span class="player-val" id="score-p0">0</span>
+          </div>
+          <div class="score-dropdown-item">
+            <span class="player-lbl">AHMET:</span>
+            <span class="player-val" id="score-p1">0</span>
+          </div>
+          <div class="score-dropdown-item">
+            <span class="player-lbl">MEHMET:</span>
+            <span class="player-val" id="score-p2">0</span>
+          </div>
+          <div class="score-dropdown-item">
+            <span class="player-lbl">AYŞE:</span>
+            <span class="player-val" id="score-p3">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="round-box">
+        <div class="stat-lbl">ROUND</div>
+        <div class="stat-val" id="round-val">1 / 10</div>
+      </div>
+      <div class="okey-box">
+        <div class="stat-lbl">OKEY</div>
+        <div id="okeyTile" class="tile"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Felt Board Area -->
+  <div class="table-felt">
+    <!-- Left Rack Backing (Visual side view) -->
+    <div class="side-rack rack-left">
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+    </div>
+
+    <!-- Right Rack Backing (Visual side view) -->
+    <div class="side-rack rack-right">
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+    </div>
+
+    <!-- Top Rack Backing (Visual top view) -->
+    <div class="top-rack-back">
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+      <div class="tile-back"></div>
+    </div>
+
+    <!-- Center Play Area (Deck & Discards) -->
+    <div class="center-play-area">
+      <!-- Deck Stack (Draw Pile) -->
+      <div class="deck-stack" id="deck-stack" onclick="drawTile()" draggable="true">
+        <div class="deck-card deck-3"></div>
+        <div class="deck-card deck-2"></div>
+        <div class="deck-card deck-1">
+          <!-- Remaining tiles label -->
+          <span id="deck-tile-count">21</span>
+        </div>
+      </div>
+
+      <!-- Discard Pile Slot -->
+      <div class="discard-container">
+        <div id="discardTile" class="tile" draggable="true" onclick="takeDiscard()"></div>
+      </div>
+    </div>
+
+    <!-- Opened tiles zones for players -->
+    <div class="opened-zone opened-zone-p0" id="opened-zone-p0"></div>
+    <div class="opened-zone opened-zone-p1" id="opened-zone-p1"></div>
+    <div class="opened-zone opened-zone-p2" id="opened-zone-p2"></div>
+    <div class="opened-zone opened-zone-p3" id="opened-zone-p3"></div>
+
+    <!-- Discard zones for players (corners) -->
+    <div class="discard-zone discard-zone-p0" id="discard-zone-p0">
+      <div class="discard-zone-title">SENİN ATILANLAR</div>
+      <div class="discard-zone-tiles" id="discard-tiles-p0"></div>
+    </div>
+    <div class="discard-zone discard-zone-p1" id="discard-zone-p1">
+      <div class="discard-zone-title">AHMET'İN ATILANLAR</div>
+      <div class="discard-zone-tiles" id="discard-tiles-p1"></div>
+    </div>
+    <div class="discard-zone discard-zone-p2" id="discard-zone-p2">
+      <div class="discard-zone-title">MEHMET'İN ATILANLAR</div>
+      <div class="discard-zone-tiles" id="discard-tiles-p2"></div>
+    </div>
+    <div class="discard-zone discard-zone-p3" id="discard-zone-p3">
+      <div class="discard-zone-title">AYŞE'NİN ATILANLAR</div>
+      <div class="discard-zone-tiles" id="discard-tiles-p3"></div>
+    </div>
+  </div>
+
+  <!-- Action / Status Message Box -->
+  <div class="message-banner" id="message">Taş dağıt ile oyuna başla.</div>
+
+  <!-- Bottom Rack Wood Frame -->
+  <div class="rack-container">
+    <!-- Selection Info Tooltip -->
+    <div id="selection-tooltip" class="selection-tooltip" style="display: none;"></div>
+
+    <div class="rack-wood">
+      <!-- Upper Rack Row Shelf Ledge -->
+      <div class="rack-shelf shelf-top"></div>
+      <!-- Lower Rack Row Shelf Ledge -->
+      <div class="rack-shelf shelf-bottom"></div>
+      
+      <!-- Slot Grid containing 40 positions (20 per row) -->
+      <div class="rack" id="rack"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Control Buttons -->
+  <div class="controls-area">
+    <div class="controls-row row-1">
+      <button class="btn-action purple" onclick="dealTiles()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+        TAŞ DAĞIT
+      </button>
+      <button class="btn-action blue" onclick="sortSeries()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M4 10.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm0-6c-.83 0-1.5-.67-1.5-1.5S3.17 1.5 4 1.5 5.5 2.17 5.5 3 4.83 4.5 4 4.5zm0 12c-.83 0-1.5-.68-1.5-1.5s.67-1.5 1.5-1.5 1.5.68 1.5 1.5-.67 1.5-1.5 1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg>
+        SERİ DİZ
+      </button>
+      <button class="btn-action green" onclick="sortPairs()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        ÇİFT DİZ
+      </button>
+      <button class="btn-action orange" onclick="openHand()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15.5h-2v-2h2v2zm0-4.5h-2V7h2v6z"/></svg>
+        ELİ AÇ
+      </button>
+      <button class="btn-action dark" onclick="recall()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        GERİ AL
+      </button>
+    </div>
+    <div class="controls-row row-2">
+      <button class="btn-action blue" onclick="drawTile()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+        TAŞ ÇEK
+      </button>
+      <button class="btn-action green" onclick="discardTile()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M12 2L4 10h5v12h6V10h5L12 2z"/></svg>
+        AT
+      </button>
+      <button class="btn-action dark" onclick="showTip()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+        İPUCU
+      </button>
+      <button class="btn-action redBtn" onclick="finishGame()">
+        <svg class="btn-svg" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        BİTİR
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js?v=32"></script>
+</body>
+</html>
