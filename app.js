@@ -251,6 +251,7 @@ function toggleTileFacedown(index) {
   if (tile && isWildcard(tile)) {
     tile.facedown = !tile.facedown;
     updateAll("Okey taşı çevrildi.");
+    uploadGameState();
     return true;
   }
   return false;
@@ -858,6 +859,7 @@ function moveGroupTo(targetStartIdx) {
 
   selectedGroupIndices = [];
   updateAll("Grup taşındı.");
+  uploadGameState();
 }
 
 /**
@@ -2940,6 +2942,7 @@ function initTouchDrag() {
           selectedIndex = null;
           selectedGroupIndices = [];
           updateAll('Taş taşındı.');
+          uploadGameState();
         }
         return;
       }
