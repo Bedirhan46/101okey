@@ -147,48 +147,82 @@ io.on('connection', (socket) => {
 
   // 4. Sync Game State (State Relay)
   socket.on('sync_state', (gameState) => {
-    const room = rooms[currentRoomCode];
-    if (!room) return;
+    try {
+      if (!gameState) return;
+      const room = rooms[currentRoomCode];
+      if (!room) return;
 
-    // Merge with previous gameState to preserve hands of other players
-    if (room.gameState) {
-      if (gameState.hands) {
-        for (let i = 0; i < 4; i++) {
-          if (i !== currentSeatIndex) {
-            if (gameState.hands[i]) {
-              gameState.hands[i] = gameState.hands[i].map((t, idx) => {
-                const cachedHand = room.gameState.hands[i];
-                if (t && t.hidden && cachedHand && cachedHand[idx]) {
-                  return cachedHand[idx];
-                }
-                return t;
-              });
-            } else {
-              gameState.hands[i] = room.gameState.hands[i];
+      // Merge with previous gameState to preserve private/concurrent data of other players
+      if (room.gameState) {
+        // 1. Merge hands
+        if (gameState.hands) {
+          for (let i = 0; i < 4; i++) {
+            if (i !== currentSeatIndex) {
+              if (gameState.hands[i]) {
+                gameState.hands[i] = gameState.hands[i].map((t, idx) => {
+                  const cachedHand = (room.gameState.hands && room.gameState.hands[i]) ? room.gameState.hands[i] : null;
+                  if (t && t.hidden && cachedHand && cachedHand[idx]) {
+                    return cachedHand[idx];
+                  }
+                  return t;
+                });
+              } else {
+                gameState.hands[i] = room.gameState.hands ? room.gameState.hands[i] : null;
+              }
+            }
+          }
+        }
+
+        // 2. Preserve botHands if not provided or if updated by non-host
+        if (!gameState.botHands && room.gameState.botHands) {
+          gameState.botHands = room.gameState.botHands;
+        } else if (currentSeatIndex !== 0 && room.gameState.botHands) {
+          gameState.botHands = room.gameState.botHands;
+        }
+
+        // 3. Merge openedGroups to preserve groups opened by other players
+        if (gameState.openedGroups && room.gameState.openedGroups) {
+          const otherPlayersGroups = room.gameState.openedGroups.filter(g => g.player !== currentSeatIndex);
+          const myGroups = gameState.openedGroups.filter(g => g.player === currentSeatIndex);
+          gameState.openedGroups = [...otherPlayersGroups, ...myGroups];
+        }
+
+        // 4. Merge discardPiles to prevent concurrent overrides
+        if (gameState.discardPiles && room.gameState.discardPiles) {
+          for (let i = 0; i < 4; i++) {
+            if (i !== currentSeatIndex) {
+              gameState.discardPiles[i] = room.gameState.discardPiles[i];
+            }
+          }
+        }
+
+        // 5. Merge playersOpened arrays to prevent concurrent overrides
+        if (gameState.playersOpened && room.gameState.playersOpened) {
+          for (let i = 0; i < 4; i++) {
+            if (i !== currentSeatIndex) {
+              gameState.playersOpened[i] = room.gameState.playersOpened[i];
+              gameState.playersOpenedThisTurn[i] = room.gameState.playersOpenedThisTurn[i];
+              gameState.playersOpeningType[i] = room.gameState.playersOpeningType[i];
             }
           }
         }
       }
-      // Also preserve botHands if not provided or if updated by non-host
-      if (!gameState.botHands && room.gameState.botHands) {
-        gameState.botHands = room.gameState.botHands;
-      } else if (currentSeatIndex !== 0 && room.gameState.botHands) {
-        gameState.botHands = room.gameState.botHands;
-      }
+
+      // Update server side gameState cache
+      room.gameState = gameState;
+
+      // Broadcast tailored state update to all players
+      room.players.forEach((p) => {
+        if (p.isBot) return;
+
+        // Filter state for player `p` to prevent cheating
+        const filteredState = filterStateForPlayer(gameState, p.seatIndex);
+
+        io.to(p.id).emit('state_update', filteredState);
+      });
+    } catch (err) {
+      console.error("Error in sync_state socket handler:", err);
     }
-
-    // Update server side gameState cache
-    room.gameState = gameState;
-
-    // Broadcast tailored state update to all players
-    room.players.forEach((p) => {
-      if (p.isBot) return;
-
-      // Filter state for player `p` to prevent cheating
-      const filteredState = filterStateForPlayer(gameState, p.seatIndex);
-
-      io.to(p.id).emit('state_update', filteredState);
-    });
   });
 
   // Chat message relay
