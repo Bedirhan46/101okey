@@ -239,6 +239,16 @@ io.on('connection', (socket) => {
         leavingPlayer.name = `Bot ${leavingPlayer.name}`;
         leavingPlayer.id = `bot_${leavingPlayer.seatIndex}`;
 
+        // Move their hand from hands[idx] to botHands[idx - 1] on the server
+        if (room.gameState && room.gameState.hands && room.gameState.hands[leavingPlayer.seatIndex]) {
+          if (!room.gameState.botHands) {
+            room.gameState.botHands = [null, null, null];
+          }
+          const guestHand = room.gameState.hands[leavingPlayer.seatIndex];
+          room.gameState.botHands[leavingPlayer.seatIndex - 1] = guestHand.filter(t => t !== null);
+          room.gameState.hands[leavingPlayer.seatIndex] = null;
+        }
+
         io.to(currentRoomCode).emit('room_update', {
           players: room.players,
           gameStarted: true
