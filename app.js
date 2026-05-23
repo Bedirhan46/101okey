@@ -3237,10 +3237,8 @@ function syncLocalStateFromServer(state) {
     return;
   }
 
-  if (mySeatIndex !== 0) {
-    deck = Array(state.deckCount || 0).fill({ id: -99, num: '?', color: 'black' });
-  } else {
-    deck = state.deck;
+  deck = state.deck || [];
+  if (mySeatIndex === 0) {
     botHands = state.botHands;
   }
 
