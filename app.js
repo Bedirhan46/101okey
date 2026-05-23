@@ -3006,20 +3006,49 @@ function uploadRoundEndState(winnerId, finishType, roundScores, hands, opened) {
 }
 
 function initSocket() {
+  const warningEl = document.getElementById('file-protocol-warning');
   if (typeof io === 'undefined') {
     console.log("Socket.IO client library not loaded.");
-    const warningEl = document.getElementById('file-protocol-warning');
     if (warningEl) {
       warningEl.style.display = 'block';
-      if (window.location.protocol === 'file:') {
-        warningEl.innerHTML = "⚠️ Oyunu doğrudan dosya olarak açtınız. Online oynamak için tarayıcıda <strong>http://localhost:8080/</strong> adresine gidin.";
-      } else {
-        warningEl.innerHTML = "⚠️ Socket.IO sunucusuna bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.";
-      }
+      warningEl.style.background = 'rgba(220, 53, 69, 0.15)';
+      warningEl.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+      warningEl.style.color = '#ff6b6b';
+      warningEl.innerHTML = "⚠️ İnternet bağlantısı yok veya Socket.IO kütüphanesi yüklenemedi. Sadece çevrimdışı oynayabilirsiniz.";
     }
     return;
   }
-  socket = io();
+
+  if (warningEl) {
+    warningEl.style.display = 'block';
+    warningEl.style.background = 'rgba(255, 193, 7, 0.15)';
+    warningEl.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+    warningEl.style.color = '#ffc107';
+    warningEl.innerHTML = "🔄 Sunucuya bağlanılıyor (Bulut sunucusunun uyanması 50 saniye kadar sürebilir)...";
+  }
+
+  socket = io("https://one01okey.onrender.com", {
+    reconnectionAttempts: 5,
+    timeout: 15000
+  });
+
+  socket.on('connect', () => {
+    console.log("Socket.IO connected successfully.");
+    if (warningEl) {
+      warningEl.style.display = 'none';
+    }
+  });
+
+  socket.on('connect_error', (error) => {
+    console.warn("Socket.IO connection error:", error);
+    if (warningEl) {
+      warningEl.style.display = 'block';
+      warningEl.style.background = 'rgba(220, 53, 69, 0.15)';
+      warningEl.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+      warningEl.style.color = '#ff6b6b';
+      warningEl.innerHTML = "⚠️ Sunucuya bağlanılamadı. Çevrimdışı/Sandbox modunu deneyebilir veya sayfayı yenileyebilirsiniz.";
+    }
+  });
 
   socket.on('room_created', ({ roomCode, seatIndex }) => {
     myRoomCode = roomCode;
@@ -3109,8 +3138,8 @@ function updateVisualPlayerNames() {
 }
 
 function socketCreateRoom() {
-  if (!socket) {
-    showMessage("⚠️ Bağlantı kurulamadı. Çevrimdışı oynamak için aşağıdaki butonu kullanabilir veya online oynamak için http://localhost:8080/ adresine gidebilirsiniz.");
+  if (!socket || !socket.connected) {
+    showMessage("⚠️ Sunucuya henüz bağlanılamadı. Lütfen sunucunun uyanmasını (en fazla 50 saniye sürebilir) bekleyin veya çevrimdışı oynamak için aşağıdaki butonu kullanın.");
     return;
   }
   const name = document.getElementById('player-nickname').value;
@@ -3122,8 +3151,8 @@ function socketCreateRoom() {
 }
 
 function socketJoinRoom() {
-  if (!socket) {
-    showMessage("⚠️ Bağlantı kurulamadı. Çevrimdışı oynamak için aşağıdaki butonu kullanabilir veya online oynamak için http://localhost:8080/ adresine gidebilirsiniz.");
+  if (!socket || !socket.connected) {
+    showMessage("⚠️ Sunucuya henüz bağlanılamadı. Lütfen sunucunun uyanmasını (en fazla 50 saniye sürebilir) bekleyin veya çevrimdışı oynamak için aşağıdaki butonu kullanın.");
     return;
   }
   const name = document.getElementById('player-nickname').value;
@@ -3140,7 +3169,7 @@ function socketJoinRoom() {
 }
 
 function socketStartGame() {
-  if (!socket) return;
+  if (!socket || !socket.connected) return;
   socket.emit('start_game');
 }
 
@@ -3150,6 +3179,7 @@ function playOffline() {
     lobbyOverlay.style.display = 'none';
   }
   socket = null;
+  dealTiles();
 }
 
 function syncLocalStateFromServer(state) {

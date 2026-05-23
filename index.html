@@ -56,8 +56,8 @@
       
       <!-- Screen 1: Enter Name & Choose Action -->
       <div id="lobby-screen-join" class="lobby-screen">
-        <div id="file-protocol-warning" class="lobby-warning" style="display: none;">
-          ⚠️ Oyunu doğrudan dosya olarak açtınız. Online oynamak için tarayıcıda http://localhost:8080/ adresine gidin.
+        <div id="file-protocol-warning" class="lobby-warning" style="display: block; background: rgba(255, 193, 7, 0.15); border: 1px solid rgba(255, 193, 7, 0.4); color: #ffc107;">
+          🔄 Sunucuya bağlanılıyor (Bulut sunucusunun uyanması 50 saniye kadar sürebilir)...
         </div>
         <div class="input-group">
           <label for="player-nickname">Kullanıcı Adınız</label>
@@ -319,7 +319,7 @@
 
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="app.js?v=32"></script>
 </body>
 </html>
