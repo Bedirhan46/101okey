@@ -41,7 +41,7 @@ Object.defineProperty(globalThis, 'discardPile', {
 });
 let selectedIndex = null;
 let selectedGroupIndices = []; // Indices of currently selected contiguous group of tiles
-let currentTurn = 0;           // 0: SEN, 1: AHMET, 2: MEHMET, 3: AYŞE
+let currentTurn = -1;           // 0: SEN, 1: AHMET, 2: MEHMET, 3: AYŞE
 let hasDrawn = false;          // Tracks if the active player has drawn a tile
 let okeyTileInfo = null;       // The shown indicator tile
 let okeyWildcardValue = null;  // The actual wildcard number and color
@@ -2972,14 +2972,11 @@ function uploadGameState(initialHands = null) {
   playersOpenedThisTurn[mySeatIndex] = player.openedThisTurn;
   playersOpeningType[mySeatIndex] = player.openingType;
 
-  // Host (seat 0) manages bot variables as well
-  if (mySeatIndex === 0) {
-    for (let v = 1; v <= 3; v++) {
-      let i = (v + mySeatIndex) % 4; // which is just i = v
-      playersOpened[i] = botOpened[v - 1];
-      playersOpenedThisTurn[i] = botOpenedThisTurn[v - 1];
-      playersOpeningType[i] = botOpeningType[v - 1];
-    }
+  for (let v = 1; v <= 3; v++) {
+    let i = (v + mySeatIndex) % 4;
+    playersOpened[i] = botOpened[v - 1];
+    playersOpenedThisTurn[i] = botOpenedThisTurn[v - 1];
+    playersOpeningType[i] = botOpeningType[v - 1];
   }
 
   const state = {
@@ -3249,7 +3246,10 @@ function syncLocalStateFromServer(state) {
 
   discardPiles = state.discardPiles;
   openedGroups = state.openedGroups;
+
+  let turnChanged = (currentTurn !== state.currentTurn);
   currentTurn = state.currentTurn;
+
   roundNumber = state.roundNumber;
   totalScores = state.totalScores;
   roundPenalties = state.roundPenalties;
@@ -3275,5 +3275,21 @@ function syncLocalStateFromServer(state) {
 
   updateAll();
   updateTurnHighlight();
+
+  if (turnChanged) {
+    if (currentTurn === mySeatIndex) {
+      showMessage("Sıra sizde! Yerden taş çekin veya yandan atılan taşı alın.");
+    } else if (isSeatBot(currentTurn)) {
+      if (mySeatIndex === 0) {
+        setTimeout(runBotTurn, 800);
+      } else {
+        const botName = playersInfo[currentTurn] ? playersInfo[currentTurn].name : 'Bot';
+        showMessage(`${botName} oynuyor...`);
+      }
+    } else {
+      const playerName = playersInfo[currentTurn] ? playersInfo[currentTurn].name : 'Oyuncu';
+      showMessage(`${playerName} oynuyor...`);
+    }
+  }
 }
 
