@@ -953,7 +953,7 @@ function discardTile() {
     return;
   }
 
-  discardPiles[0].push(tile);
+  discardPiles[mySeatIndex].push(tile);
   rackSlots[selectedIndex] = null;
   selectedIndex = null;
   selectedGroupIndices = [];
@@ -2149,11 +2149,11 @@ function finishGame() {
   // Remove last tile (it's discarded as finishing move)
   if (lastTile) {
     let idx = rackSlots.indexOf(lastTile);
-    discardPiles[0].push(lastTile);
+    discardPiles[mySeatIndex].push(lastTile);
     rackSlots[idx] = null;
   }
 
-  endRound(0, finishType);
+  endRound(mySeatIndex, finishType);
 }
 
 /**
