@@ -948,7 +948,8 @@ body {
   .shelf-top { top: 62px; }
   .shelf-bottom { top: 126px; }
 
-  .tile { width: 38px; height: 54px; font-size: 20px; }
+  .tile, .empty-tile { width: 38px; height: 54px; }
+  .tile { font-size: 20px; }
   .btn-action { padding: 8px 15px; font-size: 13.5px; }
   .btn-svg { width: 12px; height: 12px; }
   .logo-top { font-size: 36px; }
@@ -966,7 +967,8 @@ body {
   .shelf-top { top: 52px; }
   .shelf-bottom { top: 108px; }
 
-  .tile { width: 32px; height: 46px; font-size: 17px; }
+  .tile, .empty-tile { width: 32px; height: 46px; }
+  .tile { font-size: 17px; }
   .btn-action { padding: 6px 12px; font-size: 12px; }
   .logo-top { font-size: 28px; }
 }
@@ -981,7 +983,8 @@ body {
   .rack-wood { height: 130px; transform: scale(1.05); }
   .shelf-top { top: 58px; }
   .shelf-bottom { top: 118px; }
-  .tile { width: 34px; height: 50px; font-size: 18px; }
+  .tile, .empty-tile { width: 34px; height: 50px; }
+  .tile { font-size: 18px; }
   .message-banner { top: 15px; bottom: auto; font-size: 11.5px; padding: 5px 12px; white-space: normal; max-width: 90vw; text-align: center; }
   .opened-zone-p3 { left: 100px; }
   .opened-zone-p1 { right: 100px; }
@@ -1294,4 +1297,55 @@ body {
 .btn-lobby.offline-btn {
   background: linear-gradient(180deg, #5a6268 0%, #343a40 100%);
   border: 1.5px solid #6c757d;
+}
+
+/* ═══════════════════════════════════════
+   TOUCH / MOBILE / TABLET OVERRIDES
+   ═══════════════════════════════════════ */
+@media (pointer: coarse) and (max-width: 1024px) {
+  /* Scale up player's rack and shift it higher for spacious bottom gap */
+  .rack-container {
+    bottom: 165px;
+  }
+  .rack-wood {
+    transform: scale(1.22);
+  }
+
+  /* Reposition and enlarge bottom controls for fingers */
+  .controls-area {
+    bottom: 35px;
+    gap: 10px;
+  }
+  .btn-action {
+    padding: 13px 20px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  /* Make table tiles larger and more readable on handheld screens */
+  .table-tile {
+    width: 32px;
+    height: 46px;
+    font-size: 19px;
+  }
+  .table-tile:not(.joker-tile):not(.empty-tile)::after {
+    bottom: 5px;
+    width: 6px;
+    height: 6px;
+  }
+  .table-tile.wildcard-tile .star {
+    font-size: 12px;
+  }
+
+  /* Make discard zone tiles larger and more readable */
+  .discard-zone-tiles .table-tile {
+    width: 36px;
+    height: 52px;
+    font-size: 21px;
+  }
+  .discard-zone-tiles .table-tile:not(.joker-tile):not(.empty-tile)::after {
+    bottom: 6px;
+    width: 7px;
+    height: 7px;
+  }
 }
