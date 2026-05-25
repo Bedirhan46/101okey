@@ -132,6 +132,18 @@ try {
     global.enableShowMessageConsole = () => { showMessage = (msg) => { console.log('   [MSG]:', msg); }; };
     global.triggerToggleScoreDropdown = (event) => toggleScoreDropdown(event);
     global.triggerUpdateAll = (statusText) => updateAll(statusText);
+    global.getDiceRollState = () => diceRollState;
+    global.setDiceRollState = (val) => { diceRollState = val; };
+    global.getRoundStartPlayer = () => roundStartPlayer;
+    global.setRoundStartPlayer = (val) => { roundStartPlayer = val; };
+    global.getLastWinnerStarter = () => lastWinnerStarter;
+    global.setLastWinnerStarter = (val) => { lastWinnerStarter = val; };
+    global.getLastRoundStartPlayer = () => lastRoundStartPlayer;
+    global.setLastRoundStartPlayer = (val) => { lastRoundStartPlayer = val; };
+    global.triggerStartDiceRoll = () => startDiceRoll();
+    global.triggerRollDiceAll = () => rollDiceAll();
+    global.triggerFinishDiceRollAndStart = () => finishDiceRollAndStart();
+    global.triggerNextRound = () => nextRound();
   `;
   
   eval(code);
@@ -962,6 +974,113 @@ try {
       console.log('PASS: autoLayOffAll successfully processed all layoffable tiles automatically!');
     } else {
       console.error('FAIL: autoLayOffAll did not process layoffable tiles correctly!');
+    }
+
+    // Test Case 16: Dice-Rolling and Round Starting Player Logic
+    console.log('\n--- Test Case 16: Starting Dice Roll and Round Starter Logic ---');
+
+    // 16a: Check initial state activation
+    global.triggerStartDiceRoll();
+    let dState = global.getDiceRollState();
+    if (dState && dState.active && dState.phase === 'initial') {
+      console.log('PASS: startDiceRoll successfully initialized dice rolling state!');
+    } else {
+      console.error('FAIL: startDiceRoll initialization failed!', dState);
+    }
+
+    // 16b: Roll dice and simulate tie
+    global.window.mySeatIndex = 0; // Ensure seat index mock has 0
+    global.setDiceRollState({
+      active: true,
+      rolls: [6, 6, 4, 3],
+      rolling: false,
+      winnerId: -1,
+      phase: 'tie',
+      tiePlayers: [0, 1]
+    });
+    
+    dState = global.getDiceRollState();
+    if (dState.phase === 'tie' && dState.tiePlayers.length === 2 && dState.tiePlayers.includes(0) && dState.tiePlayers.includes(1)) {
+      console.log('PASS: Dice rolling successfully registered a tie between Player 0 and Player 1!');
+    } else {
+      console.error('FAIL: Tie registration failed!');
+    }
+
+    // 16c: Simulate resolution with a single winner (Player 2 rolls highest)
+    global.setDiceRollState({
+      active: true,
+      rolls: [2, 4, 6, 1],
+      rolling: false,
+      winnerId: 2,
+      phase: 'done',
+      tiePlayers: []
+    });
+
+    global.triggerFinishDiceRollAndStart();
+    
+    let currentStartPlayer = global.getRoundStartPlayer();
+    let currentLastStartPlayer = global.getLastRoundStartPlayer();
+    let currentTurn = global.dumpState().currentTurn;
+    
+    if (currentStartPlayer === 2 && currentLastStartPlayer === 2 && currentTurn === 2 && global.getDiceRollState() === null) {
+      console.log('PASS: finishDiceRollAndStart correctly sets roundStartPlayer and starts turn on winner (Player 2)!');
+    } else {
+      console.error('FAIL: finishDiceRollAndStart verification failed!', {
+        currentStartPlayer, currentLastStartPlayer, currentTurn, state: global.getDiceRollState()
+      });
+    }
+
+    // 16d: Subsequent round sequence progression
+    global.setLastWinnerStarter(-1);
+    global.setLastRoundStartPlayer(2); // Last round was started by Player 2
+    
+    global.triggerNextRound();
+    
+    let nextStartPlayer = global.getRoundStartPlayer();
+    if (nextStartPlayer === 3) {
+      console.log('PASS: nextRound properly advanced starter sequentially (2 -> 3) on a draw!');
+    } else {
+      console.error('FAIL: nextRound sequential advancement failed! Expected 3, got:', nextStartPlayer);
+    }
+
+    // Advance one more round to wrap around
+    global.setLastRoundStartPlayer(3);
+    global.triggerNextRound();
+    nextStartPlayer = global.getRoundStartPlayer();
+    if (nextStartPlayer === 0) {
+      console.log('PASS: nextRound sequential advancement wrapped around successfully (3 -> 0)!');
+    } else {
+      console.error('FAIL: nextRound wrap around failed! Expected 0, got:', nextStartPlayer);
+    }
+
+    // 16e: Win/Finish locks subsequent round starter
+    global.setLastWinnerStarter(1);
+    
+    global.triggerNextRound();
+    nextStartPlayer = global.getRoundStartPlayer();
+    if (nextStartPlayer === 1) {
+      console.log('PASS: nextRound locks the starting player to the winner (Player 1)!');
+    } else {
+      console.error('FAIL: nextRound winner starter lock failed! Expected 1, got:', nextStartPlayer);
+    }
+
+    // Run another round, Player 1 should still start since they won previously and no new winner is set
+    global.triggerNextRound();
+    nextStartPlayer = global.getRoundStartPlayer();
+    if (nextStartPlayer === 1) {
+      console.log('PASS: nextRound keeps starter locked to Player 1 for subsequent round when winner remains unchanged!');
+    } else {
+      console.error('FAIL: nextRound persistent winner starter lock failed! Expected 1, got:', nextStartPlayer);
+    }
+
+    // Simulate Player 3 winning next round
+    global.setLastWinnerStarter(3);
+    global.triggerNextRound();
+    nextStartPlayer = global.getRoundStartPlayer();
+    if (nextStartPlayer === 3) {
+      console.log('PASS: nextRound updates starting player to the new winner (Player 3)!');
+    } else {
+      console.error('FAIL: nextRound winner starter update failed! Expected 3, got:', nextStartPlayer);
     }
   }
 } catch (e) {

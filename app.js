@@ -43,6 +43,10 @@ let selectedIndex = null;
 let selectedGroupIndices = []; // Indices of currently selected contiguous group of tiles
 let currentTurn = -1;           // 0: SEN, 1: AHMET, 2: MEHMET, 3: AYŞE
 let hasDrawn = false;          // Tracks if the active player has drawn a tile
+let roundStartPlayer = 0;       // The player index who starts the current round
+let lastRoundStartPlayer = 0;   // The player index who started the last round
+let lastWinnerStarter = -1;     // The player index who won the last round and starts subsequent rounds
+let diceRollState = null;       // Dice roll state: { active, rolls, rolling, winnerId, phase, tiePlayers }
 let okeyTileInfo = null;       // The shown indicator tile
 let okeyWildcardValue = null;  // The actual wildcard number and color
 let uniqueId = 0;
@@ -156,7 +160,7 @@ function dealTiles() {
   discardPiles = [[], [], [], []];
   selectedIndex = null;
   selectedGroupIndices = [];
-  currentTurn = 0;
+  currentTurn = roundStartPlayer;
   hasDrawn = false;
   player.opened = false;
   player.openedThisTurn = false;
@@ -1892,6 +1896,10 @@ function endRound(winnerId, finishType) {
     return;
   }
 
+  if (winnerId !== -1) {
+    lastWinnerStarter = winnerId;
+  }
+
   const names = playersInfo.map(p => p.name);
 
   // ── Gather remaining hand tiles ──
@@ -2104,6 +2112,12 @@ function nextRound() {
   
   if (mySeatIndex === 0) {
     roundNumber++;
+    if (lastWinnerStarter !== -1) {
+      roundStartPlayer = lastWinnerStarter;
+    } else {
+      roundStartPlayer = (lastRoundStartPlayer + 1) % 4;
+    }
+    lastRoundStartPlayer = roundStartPlayer;
     dealTiles();
   }
 }
@@ -2176,7 +2190,10 @@ function resetGame() {
   if (mySeatIndex === 0) {
     roundNumber = 1;
     totalScores = [0, 0, 0, 0];
-    dealTiles();
+    roundStartPlayer = 0;
+    lastRoundStartPlayer = 0;
+    lastWinnerStarter = -1;
+    startDiceRoll();
   }
 }
 
@@ -2835,6 +2852,251 @@ function updateButtonsState() {
   }
 }
 
+function startDiceRoll() {
+  diceRollState = {
+    active: true,
+    rolls: [0, 0, 0, 0],
+    rolling: false,
+    winnerId: -1,
+    phase: 'initial',
+    tiePlayers: []
+  };
+  updateAll("Zar atışı başlatılıyor...");
+  uploadGameState();
+}
+
+function rollDiceAll() {
+  if (mySeatIndex !== 0) return;
+
+  diceRollState.rolling = true;
+  diceRollState.phase = 'rolling';
+  updateAll();
+  uploadGameState();
+
+  let count = 0;
+  let interval = setInterval(() => {
+    // Generate dummy rolls to animate values
+    for (let i = 0; i < 4; i++) {
+      diceRollState.rolls[i] = Math.floor(Math.random() * 6) + 1;
+    }
+    updateAll();
+    count++;
+    if (count > 6) {
+      clearInterval(interval);
+      
+      // Calculate final rolls
+      let rolls = [0, 0, 0, 0];
+      for (let i = 0; i < 4; i++) {
+        rolls[i] = Math.floor(Math.random() * 6) + 1;
+      }
+      
+      // Find max roll and who rolled it
+      let maxRoll = Math.max(...rolls);
+      let winners = [];
+      for (let i = 0; i < 4; i++) {
+        if (rolls[i] === maxRoll) {
+          winners.push(i);
+        }
+      }
+
+      diceRollState.rolls = rolls;
+      diceRollState.rolling = false;
+
+      if (winners.length === 1) {
+        diceRollState.winnerId = winners[0];
+        diceRollState.phase = 'done';
+      } else {
+        diceRollState.phase = 'tie';
+        diceRollState.tiePlayers = winners;
+      }
+      
+      updateAll();
+      uploadGameState();
+    }
+  }, 150);
+}
+
+function finishDiceRollAndStart() {
+  if (mySeatIndex !== 0) return;
+
+  roundStartPlayer = diceRollState.winnerId;
+  lastRoundStartPlayer = roundStartPlayer;
+  currentTurn = roundStartPlayer;
+  
+  // Close dice roll overlay
+  diceRollState = null;
+  
+  dealTiles();
+}
+
+function getDiceSvg(value, isRolling) {
+  let dots = "";
+  let fillClass = isRolling ? "dice-rolling" : "";
+  
+  if (value === 1) {
+    dots = `<circle cx="30" cy="30" r="6.5" fill="#c62828"/>`;
+  } else if (value === 2) {
+    dots = `
+      <circle cx="18" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="42" r="4.5" fill="#212121"/>
+    `;
+  } else if (value === 3) {
+    dots = `
+      <circle cx="18" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="30" cy="30" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="42" r="4.5" fill="#212121"/>
+    `;
+  } else if (value === 4) {
+    dots = `
+      <circle cx="18" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="18" cy="42" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="42" r="4.5" fill="#212121"/>
+    `;
+  } else if (value === 5) {
+    dots = `
+      <circle cx="18" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="18" cy="42" r="4.5" fill="#212121"/>
+      <circle cx="30" cy="30" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="42" r="4.5" fill="#212121"/>
+    `;
+  } else if (value === 6) {
+    dots = `
+      <circle cx="18" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="18" cy="30" r="4.5" fill="#212121"/>
+      <circle cx="18" cy="42" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="18" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="30" r="4.5" fill="#212121"/>
+      <circle cx="42" cy="42" r="4.5" fill="#212121"/>
+    `;
+  }
+
+  return `
+    <svg width="60" height="60" viewBox="0 0 60 60" class="${fillClass}" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));">
+      <rect x="2" y="2" width="56" height="56" rx="12" fill="#fdfaf2" stroke="#baa687" stroke-width="2.5"/>
+      ${dots}
+    </svg>
+  `;
+}
+
+function renderDiceRollModal() {
+  let existing = document.getElementById('dice-modal-overlay');
+  if (existing) existing.remove();
+
+  if (!diceRollState || !diceRollState.active) return;
+
+  const names = [0, 1, 2, 3].map(seatIdx => {
+    const p = playersInfo.find(player => player.seatIndex === seatIdx);
+    return p ? p.name : `Oyuncu ${seatIdx + 1}`;
+  });
+
+  const cardsHtml = [0, 1, 2, 3].map(i => {
+    const roll = diceRollState.rolls[i];
+    const isWinner = diceRollState.phase === 'done' && i === diceRollState.winnerId;
+    const isTie = diceRollState.phase === 'tie' && diceRollState.tiePlayers && diceRollState.tiePlayers.includes(i);
+    
+    let cardClass = "dice-player-card";
+    if (isWinner) cardClass += " is-winner";
+    if (isTie) cardClass += " is-tie";
+
+    const labelHtml = isWinner ? '<div style="color:#ffd700;font-size:11px;font-weight:900;margin-top:8px;">★ BAŞLIYOR ★</div>' : 
+                      isTie ? '<div style="color:#ff9800;font-size:11px;font-weight:900;margin-top:8px;">BERABERE</div>' : '';
+
+    const diceMarkup = (roll > 0) ? getDiceSvg(roll, diceRollState.rolling) : 
+                       diceRollState.rolling ? getDiceSvg(Math.floor(Math.random() * 6) + 1, true) :
+                       `<div style="font-size:24px;color:rgba(255,255,255,0.2);">?</div>`;
+
+    return `
+      <div class="${cardClass}" id="dice-card-p${i}">
+        <div class="dice-player-name">${i === mySeatIndex ? '⭐ ' : ''}${names[i]}</div>
+        <div class="dice-cube-container">
+          ${diceMarkup}
+        </div>
+        ${labelHtml}
+      </div>
+    `;
+  }).join('');
+
+  let buttonHtml = "";
+  let infoText = "";
+
+  if (mySeatIndex === 0) {
+    if (diceRollState.phase === 'initial') {
+      infoText = "Oyuna kimin başlayacağını belirlemek için zar atın!";
+      buttonHtml = `<button onclick="rollDiceAll()" style="
+        background:linear-gradient(180deg,#6c429c,#4a2b70);
+        border:1.5px solid #8e62c2;
+        color:white;font-weight:800;font-size:14.5px;
+        padding:13px 32px;border-radius:12px;cursor:pointer;
+        box-shadow:0 4px 0 rgba(0,0,0,0.4);
+        font-family:'Outfit',sans-serif;
+      ">🎲 ZAR AT</button>`;
+    } else if (diceRollState.phase === 'rolling') {
+      infoText = "Zarlar dönüyor...";
+      buttonHtml = `<button disabled style="
+        background:#4a4642;
+        border:1.5px solid #6e6964;
+        color:#888;font-weight:800;font-size:14.5px;
+        padding:13px 32px;border-radius:12px;cursor:not-allowed;
+        font-family:'Outfit',sans-serif;
+      ">ZAR ATILIYOR...</button>`;
+    } else if (diceRollState.phase === 'tie') {
+      infoText = "Beraberlik oluştu! Lütfen tekrar zar atın.";
+      buttonHtml = `<button onclick="rollDiceAll()" style="
+        background:linear-gradient(180deg,#c16715,#824107);
+        border:1.5px solid #e38a34;
+        color:white;font-weight:800;font-size:14.5px;
+        padding:13px 32px;border-radius:12px;cursor:pointer;
+        box-shadow:0 4px 0 rgba(0,0,0,0.4);
+        font-family:'Outfit',sans-serif;
+      ">🎲 TEKRAR ZAR AT</button>`;
+    } else if (diceRollState.phase === 'done') {
+      infoText = `${names[diceRollState.winnerId]} en yüksek zarı attı ve eli başlatıyor!`;
+      buttonHtml = `<button onclick="finishDiceRollAndStart()" style="
+        background:linear-gradient(180deg,#31703b,#1c4523);
+        border:1.5px solid #52a15e;
+        color:white;font-weight:800;font-size:14.5px;
+        padding:13px 32px;border-radius:12px;cursor:pointer;
+        box-shadow:0 4px 0 rgba(0,0,0,0.4);
+        font-family:'Outfit',sans-serif;
+      ">OYUNU BAŞLAT</button>`;
+    }
+  } else {
+    if (diceRollState.phase === 'initial') {
+      infoText = "Oyuna kimin başlayacağını belirlemek için oda sahibinin zar atması bekleniyor...";
+    } else if (diceRollState.phase === 'rolling') {
+      infoText = "Zarlar atılıyor...";
+    } else if (diceRollState.phase === 'tie') {
+      infoText = "Beraberlik oluştu! Oda sahibinin tekrar zar atması bekleniyor...";
+    } else if (diceRollState.phase === 'done') {
+      infoText = `${names[diceRollState.winnerId]} en yüksek zarı attı ve eli başlatıyor! Oyun başlayacak...`;
+    }
+    buttonHtml = `<div style="font-size:14px;color:#aaa;font-weight:bold;animation:pulseText 1s infinite alternate;">BEKLENİYOR...</div>`;
+  }
+
+  const modalHtml = `
+    <div id="dice-modal-overlay" class="dice-overlay">
+      <div class="dice-modal">
+        <div style="font-size:36px;margin-bottom:8px">🎲</div>
+        <div style="font-size:24px;font-weight:900;margin-bottom:4px;letter-spacing:1px;">BAŞLANGIÇ ZAR ATIŞI</div>
+        <div style="font-size:14px;color:#aaa;margin-bottom:20px;height:20px;line-height:20px;">${infoText}</div>
+        
+        <div class="dice-players-row">
+          ${cardsHtml}
+        </div>
+        
+        <div style="margin-top:30px;">
+          ${buttonHtml}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!document.body) return;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
 /**
  * Updates all visual aspects of the board
  */
@@ -2867,6 +3129,14 @@ function updateAll(statusText) {
   }
 
   updateButtonsState();
+
+  // Render dice roll overlay if active
+  if (diceRollState && diceRollState.active) {
+    renderDiceRollModal();
+  } else {
+    let existing = document.getElementById('dice-modal-overlay');
+    if (existing) existing.remove();
+  }
 }
 
 function toggleScoreDropdown(event) {
@@ -2914,6 +3184,8 @@ window.socketJoinRoom = socketJoinRoom;
 window.socketStartGame = socketStartGame;
 window.playOffline = playOffline;
 window.autoLayOffAll = autoLayOffAll;
+window.rollDiceAll = rollDiceAll;
+window.finishDiceRollAndStart = finishDiceRollAndStart;
 
 if (typeof window !== 'undefined' && window.location && window.location.search.includes('offline')) {
   setTimeout(() => {
@@ -3283,7 +3555,12 @@ function uploadGameState(initialHands = null) {
     okeyWildcardValue: okeyWildcardValue,
     
     hands: hands,
-    botHands: botHands
+    botHands: botHands,
+
+    diceRollState: diceRollState,
+    roundStartPlayer: roundStartPlayer,
+    lastRoundStartPlayer: lastRoundStartPlayer,
+    lastWinnerStarter: lastWinnerStarter
   };
 
   socket.emit('sync_state', state);
@@ -3383,7 +3660,7 @@ function initSocket() {
     updateVisualPlayerNames();
 
     if (mySeatIndex === 0) {
-      dealTiles();
+      startDiceRoll();
     }
   });
 
@@ -3509,7 +3786,7 @@ function playOffline() {
     lobbyOverlay.style.display = 'none';
   }
   socket = null;
-  dealTiles();
+  startDiceRoll();
 }
 
 function syncLocalStateFromServer(state) {
@@ -3529,6 +3806,12 @@ function syncLocalStateFromServer(state) {
 
   discardPiles = state.discardPiles;
   openedGroups = state.openedGroups;
+
+  // Sync dice roll state and round starter state variables
+  diceRollState = state.diceRollState || null;
+  roundStartPlayer = state.roundStartPlayer !== undefined ? state.roundStartPlayer : 0;
+  lastRoundStartPlayer = state.lastRoundStartPlayer !== undefined ? state.lastRoundStartPlayer : 0;
+  lastWinnerStarter = state.lastWinnerStarter !== undefined ? state.lastWinnerStarter : -1;
 
   let turnChanged = (currentTurn !== state.currentTurn);
   currentTurn = state.currentTurn;
@@ -3559,7 +3842,7 @@ function syncLocalStateFromServer(state) {
   updateAll();
   updateTurnHighlight();
 
-  if (turnChanged) {
+  if (turnChanged && (!diceRollState || !diceRollState.active)) {
     if (currentTurn === mySeatIndex) {
       showMessage("Sıra sizde! Yerden taş çekin veya yandan atılan taşı alın.");
     } else if (isSeatBot(currentTurn)) {
