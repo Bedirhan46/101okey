@@ -553,7 +553,7 @@ body {
 /* Controls and Buttons Area (Bottom Center) */
 .controls-area {
   position: absolute;
-  bottom: 20px;
+  bottom: 45px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -938,7 +938,7 @@ body {
    ═══════════════════════════════════════ */
 @media (max-height: 850px) {
   .rack-container  { bottom: 120px; }
-  .controls-area   { bottom: 12px; gap: 6px; }
+  .controls-area   { bottom: 25px; gap: 6px; }
   .table-felt      { bottom: 275px; }
   .message-banner  { top: 20px; bottom: auto; }
   .opened-zone-p0  { bottom: 50px; }
@@ -956,7 +956,7 @@ body {
 
 @media (max-height: 700px) {
   .rack-container  { bottom: 95px; }
-  .controls-area   { bottom: 10px; gap: 4px; }
+  .controls-area   { bottom: 20px; gap: 4px; }
   .table-felt      { bottom: 220px; }
   .message-banner  { top: 15px; bottom: auto; }
   .opened-zone-p0  { bottom: 40px; }
