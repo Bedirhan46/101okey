@@ -366,7 +366,7 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 125px;
+  bottom: 160px;
   display: flex;
   justify-content: center;
   z-index: 12;
@@ -385,8 +385,7 @@ body {
   padding: 10px 15px;
   pointer-events: auto;
   box-sizing: border-box;
-  transform: perspective(1000px) rotateX(15deg) scale(1.12);
-  transform-style: preserve-3d;
+  transform: scale(1.12);
   transition: transform 0.3s ease;
 }
 
@@ -938,13 +937,13 @@ body {
    TABLET & SMALL SCREEN RESPONSIVE RULES
    ═══════════════════════════════════════ */
 @media (max-height: 850px) {
-  .rack-container  { bottom: 95px; }
+  .rack-container  { bottom: 120px; }
   .controls-area   { bottom: 12px; gap: 6px; }
   .table-felt      { bottom: 275px; }
   .message-banner  { top: 20px; bottom: auto; }
   .opened-zone-p0  { bottom: 50px; }
 
-  .rack-wood { height: 140px; transform: perspective(800px) rotateX(12deg) scale(1.08); }
+  .rack-wood { height: 140px; transform: scale(1.08); }
   .shelf-top { top: 62px; }
   .shelf-bottom { top: 126px; }
 
@@ -956,13 +955,13 @@ body {
 }
 
 @media (max-height: 700px) {
-  .rack-container  { bottom: 75px; }
+  .rack-container  { bottom: 95px; }
   .controls-area   { bottom: 10px; gap: 4px; }
   .table-felt      { bottom: 220px; }
   .message-banner  { top: 15px; bottom: auto; }
   .opened-zone-p0  { bottom: 40px; }
 
-  .rack-wood { height: 120px; transform: perspective(600px) rotateX(10deg) scale(1.05); }
+  .rack-wood { height: 120px; transform: scale(1.05); }
   .shelf-top { top: 52px; }
   .shelf-bottom { top: 108px; }
 
@@ -978,7 +977,7 @@ body {
   .btn-action { padding: 8px 12px; font-size: 12px; }
   .logo-top { font-size: 30px; }
   .logo-bottom { font-size: 11px; letter-spacing: 3px; }
-  .rack-wood { height: 130px; transform: perspective(700px) rotateX(10deg) scale(1.05); }
+  .rack-wood { height: 130px; transform: scale(1.05); }
   .shelf-top { top: 58px; }
   .shelf-bottom { top: 118px; }
   .tile { width: 34px; height: 50px; font-size: 18px; }
