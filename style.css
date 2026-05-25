@@ -163,9 +163,50 @@ body {
 .table-felt {
   position: absolute;
   top: 130px;
-  bottom: 240px;
+  bottom: 130px;
   left: 20px;
   right: 20px;
+}
+
+/* Giant Table Felt Watermark Logo */
+.table-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Outfit', sans-serif;
+  color: rgba(255, 255, 255, 0.045);
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+.watermark-top {
+  font-size: 140px;
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: 4px;
+}
+
+.watermark-bottom {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 12px;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.watermark-bottom::before, .watermark-bottom::after {
+  content: "";
+  display: inline-block;
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.045);
+  vertical-align: middle;
+  margin: 0 12px;
 }
 
 /* Side racks view */
@@ -303,7 +344,7 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 135px;
+  bottom: 20px;
   display: flex;
   justify-content: center;
   z-index: 8;
@@ -481,16 +522,12 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Controls and Buttons Area (Bottom Row) */
+/* Controls and Buttons Area (Top Center) */
 .controls-area {
-  position: absolute;
-  bottom: 10px;
-  left: 0;
-  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   z-index: 10;
   pointer-events: none;
 }
@@ -504,22 +541,22 @@ body {
   border: 0;
   color: white;
   font-weight: 800;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 9px;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.45);
+  gap: 6px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.45);
   transition: transform 0.1s, box-shadow 0.1s;
   pointer-events: auto;
   font-family: 'Outfit', sans-serif;
 }
 
 .btn-action:active {
-  transform: translateY(4px);
-  box-shadow: none;
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.45);
 }
 
 .purple { background: linear-gradient(180deg, #6c429c 0%, #4a2b70 100%); border: 1.5px solid #8e62c2; }
@@ -530,8 +567,8 @@ body {
 .redBtn { background: linear-gradient(180deg, #b22222 0%, #701111 100%); border: 1.5px solid #d34e4e; }
 
 .btn-svg {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   fill: currentColor;
 }
 
@@ -553,7 +590,7 @@ body {
 }
 
 .opened-zone-p0 {
-  bottom: 75px;
+  bottom: 65px;
   left: 50%;
   transform: translateX(-50%);
   max-width: 700px;
@@ -870,10 +907,10 @@ body {
    TABLET & SMALL SCREEN RESPONSIVE RULES
    ═══════════════════════════════════════ */
 @media (max-height: 850px) {
-  .rack-container  { bottom: 160px; }
-  .controls-area   { bottom: 8px; gap: 5px; }
-  .table-felt      { bottom: 260px; }
-  .message-banner  { bottom: 385px; }
+  .rack-container  { bottom: 15px; }
+  .controls-area   { gap: 5px; }
+  .table-felt      { bottom: 110px; }
+  .message-banner  { bottom: 270px; }
   .opened-zone-p0  { bottom: 60px; }
 
   .rack-wood { height: 150px; }
@@ -888,11 +925,11 @@ body {
 }
 
 @media (max-height: 700px) {
-  .rack-container  { bottom: 140px; }
-  .controls-area   { bottom: 5px; gap: 4px; }
-  .table-felt      { bottom: 235px; }
-  .message-banner  { bottom: 360px; }
-  .opened-zone-p0  { bottom: 45px; }
+  .rack-container  { bottom: 10px; }
+  .controls-area   { gap: 4px; }
+  .table-felt      { bottom: 90px; }
+  .message-banner  { bottom: 230px; }
+  .opened-zone-p0  { bottom: 55px; }
 
   .rack-wood { height: 130px; }
   .shelf-top { top: 55px; }
