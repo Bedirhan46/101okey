@@ -1276,70 +1276,110 @@ function layDownGroup() {
   }
 }
 
-function openHand() {
+function openHandSeries() {
   if (currentTurn !== mySeatIndex) {
     showMessage("Sıra sizde değil! Elinizi açamazsınız.");
     return;
   }
-  // If already opened, delegate to layDownGroup for placing new groups
   if (player.opened) {
+    if (player.openingType === 'pairs') {
+      showMessage("Çift açtığınız için seri indiremezsiniz!");
+      return;
+    }
     layDownGroup();
     return;
   }
   recalculateScore();
   
-  if (player.score >= 101) {
-    if (tookDiscardThisTurn && discardedTileTaken) {
-      if (!isDiscardTileUsedInMelds('series', discardedTileTaken)) {
-        showMessage("Yandan aldığınız taşı açtığınız serilerde kullanmak zorundasınız!");
-        return;
-      }
+  if (player.score < 101) {
+    showMessage(`Seri açabilmek için en az 101 puanınız olmalıdır! (Şu anki puanınız: ${player.score})`);
+    return;
+  }
+
+  if (tookDiscardThisTurn && discardedTileTaken) {
+    if (!isDiscardTileUsedInMelds('series', discardedTileTaken)) {
+      showMessage("Yandan aldığınız taşı açtığınız serilerde kullanmak zorundasınız!");
+      return;
     }
-    playerOpeningScore = player.score;
-    playerOpeningPairs = player.pairs;
-    let extracted = extractMeldsFromRack('series');
-    if (extracted) {
-      player.opened = true;
-      player.openedThisTurn = true;
-      player.openingType = 'series';
-      tookDiscardThisTurn = false;
-      discardedTileTaken = null;
-      updateAll(`Tebrikler! Elinizi seri perler ile açtınız (Toplam puan: ${playerOpeningScore})`);
-      uploadGameState();
-      // Auto-finish if rack is now empty after opening
-      if (rackSlots.filter(t => t !== null).length === 0) {
-        setTimeout(() => endRound(mySeatIndex, playerFinishedFromHand ? 'elden' : 'normal'), 600);
-      }
-    } else {
-      showMessage("Hata: Geçerli seriler ıskalarda bulunamadı.");
-    }
-  } else if (player.pairs >= 5) {
-    if (tookDiscardThisTurn && discardedTileTaken) {
-      if (!isDiscardTileUsedInMelds('pairs', discardedTileTaken)) {
-        showMessage("Yandan aldığınız taşı açtığınız çiftlerde kullanmak zorundasınız!");
-        return;
-      }
-    }
-    playerOpeningScore = player.score;
-    playerOpeningPairs = player.pairs;
-    let extracted = extractMeldsFromRack('pairs');
-    if (extracted) {
-      player.opened = true;
-      player.openedThisTurn = true;
-      player.openingType = 'pairs';
-      tookDiscardThisTurn = false;
-      discardedTileTaken = null;
-      updateAll(`Tebrikler! Elinizi çift perler ile açtınız (${playerOpeningPairs} çift)`);
-      uploadGameState();
-      // Auto-finish if rack is now empty after opening
-      if (rackSlots.filter(t => t !== null).length === 0) {
-        setTimeout(() => endRound(mySeatIndex, playerFinishedFromHand ? 'elden' : 'normal'), 600);
-      }
-    } else {
-      showMessage("Hata: Geçerli çiftler ıskalarda bulunamadı.");
+  }
+
+  playerOpeningScore = player.score;
+  playerOpeningPairs = player.pairs;
+  let extracted = extractMeldsFromRack('series');
+  if (extracted) {
+    player.opened = true;
+    player.openedThisTurn = true;
+    player.openingType = 'series';
+    tookDiscardThisTurn = false;
+    discardedTileTaken = null;
+    updateAll(`Tebrikler! Elinizi seri perler ile açtınız (Toplam puan: ${playerOpeningScore})`);
+    uploadGameState();
+    // Auto-finish if rack is now empty after opening
+    if (rackSlots.filter(t => t !== null).length === 0) {
+      setTimeout(() => endRound(mySeatIndex, playerFinishedFromHand ? 'elden' : 'normal'), 600);
     }
   } else {
-    showMessage(`Eliniz açılamaz. Perlerin toplamı: ${player.score} (en az 101 lazım) veya Çift sayısı: ${player.pairs} (en az 5 çift lazım).`);
+    showMessage("Hata: Geçerli seriler ıskalarda bulunamadı.");
+  }
+}
+
+function openHandPairs() {
+  if (currentTurn !== mySeatIndex) {
+    showMessage("Sıra sizde değil! Elinizi açamazsınız.");
+    return;
+  }
+  if (player.opened) {
+    if (player.openingType === 'series') {
+      showMessage("Seri açtığınız için çift indiremezsiniz!");
+      return;
+    }
+    layDownGroup();
+    return;
+  }
+  recalculateScore();
+
+  if (player.pairs < 5) {
+    showMessage(`Çift açabilmek için en az 5 çiftiniz olmalıdır! (Şu anki çift sayınız: ${player.pairs})`);
+    return;
+  }
+
+  if (tookDiscardThisTurn && discardedTileTaken) {
+    if (!isDiscardTileUsedInMelds('pairs', discardedTileTaken)) {
+      showMessage("Yandan aldığınız taşı açtığınız çiftlerde kullanmak zorundasınız!");
+      return;
+    }
+  }
+
+  playerOpeningScore = player.score;
+  playerOpeningPairs = player.pairs;
+  let extracted = extractMeldsFromRack('pairs');
+  if (extracted) {
+    player.opened = true;
+    player.openedThisTurn = true;
+    player.openingType = 'pairs';
+    tookDiscardThisTurn = false;
+    discardedTileTaken = null;
+    updateAll(`Tebrikler! Elinizi çift perler ile açtınız (${playerOpeningPairs} çift)`);
+    uploadGameState();
+    // Auto-finish if rack is now empty after opening
+    if (rackSlots.filter(t => t !== null).length === 0) {
+      setTimeout(() => endRound(mySeatIndex, playerFinishedFromHand ? 'elden' : 'normal'), 600);
+    }
+  } else {
+    showMessage("Hata: Geçerli çiftler ıskalarda bulunamadı.");
+  }
+}
+
+function openHand() {
+  if (player.opened) {
+    layDownGroup();
+    return;
+  }
+  recalculateScore();
+  if (player.score >= 101) {
+    openHandSeries();
+  } else {
+    openHandPairs();
   }
 }
 
@@ -2663,6 +2703,8 @@ window.dealTiles = dealTiles;
 window.sortSeries = sortSeries;
 window.sortPairs = sortPairs;
 window.openHand = openHand;
+window.openHandSeries = openHandSeries;
+window.openHandPairs = openHandPairs;
 window.recall = recall;
 window.drawTile = drawTile;
 window.discardTile = discardTile;
