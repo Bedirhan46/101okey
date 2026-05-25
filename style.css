@@ -553,7 +553,7 @@ body {
 }
 
 .opened-zone-p0 {
-  bottom: 240px;
+  bottom: 75px;
   left: 50%;
   transform: translateX(-50%);
   max-width: 700px;
@@ -569,7 +569,7 @@ body {
 }
 
 .opened-zone-p3 {
-  left: 70px;
+  left: 180px;
   top: 45%;
   transform: translateY(-50%);
   flex-direction: column;
@@ -577,7 +577,7 @@ body {
 }
 
 .opened-zone-p1 {
-  right: 70px;
+  right: 180px;
   top: 45%;
   transform: translateY(-50%);
   flex-direction: column;
@@ -874,7 +874,7 @@ body {
   .controls-area   { bottom: 8px; gap: 5px; }
   .table-felt      { bottom: 260px; }
   .message-banner  { bottom: 385px; }
-  .opened-zone-p0  { bottom: 260px; }
+  .opened-zone-p0  { bottom: 60px; }
 
   .rack-wood { height: 150px; }
   .shelf-top { top: 66px; }
@@ -892,7 +892,7 @@ body {
   .controls-area   { bottom: 5px; gap: 4px; }
   .table-felt      { bottom: 235px; }
   .message-banner  { bottom: 360px; }
-  .opened-zone-p0  { bottom: 235px; }
+  .opened-zone-p0  { bottom: 45px; }
 
   .rack-wood { height: 130px; }
   .shelf-top { top: 55px; }
@@ -915,6 +915,8 @@ body {
   .shelf-bottom { top: 126px; }
   .tile { width: 38px; height: 56px; font-size: 20px; }
   .message-banner { font-size: 12px; padding: 6px 16px; white-space: normal; max-width: 90vw; text-align: center; }
+  .opened-zone-p3 { left: 110px; }
+  .opened-zone-p1 { right: 110px; }
 }
 
 /* Score Dropdown Box styling */
