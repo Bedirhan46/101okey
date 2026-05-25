@@ -968,14 +968,18 @@ function discardTile() {
   let tileName = isWildcard(tile) ? 'Okey' : (tile.fake ? 'Sahte Okey' : tile.color.toUpperCase() + ' ' + tile.num);
   let penalties = [];
 
+  // Check if player's rack is now empty → auto-finish
+  let remaining = rackSlots.filter(t => t !== null).length;
+  let isFinishing = (remaining === 0 && player.opened);
+
   // ── Okey atma cezası: +100 puan ──
-  if (isWildcard(tile)) {
+  if (!isFinishing && isWildcard(tile)) {
     roundPenalties[mySeatIndex] += 100;
     penalties.push('Okey attınız (+100)');
   }
 
   // ── İşlek cezası: atılan taş masaya işlenebiliyorsa +100 puan ──
-  if (!isWildcard(tile) && openedGroups.length > 0 && tileCanLayOff(tile)) {
+  if (!isFinishing && !isWildcard(tile) && openedGroups.length > 0 && tileCanLayOff(tile)) {
     roundPenalties[mySeatIndex] += 100;
     penalties.push('İşlek kaçırdınız (+100)');
   }
@@ -986,9 +990,7 @@ function discardTile() {
     updateAll(`Yere taş attınız: ${tileName}`);
   }
 
-  // Check if player's rack is now empty → auto-finish
-  let remaining = rackSlots.filter(t => t !== null).length;
-  if (remaining === 0 && player.opened) {
+  if (isFinishing) {
     let finishType = playerFinishedFromHand ? 'elden' : (isWildcard(tile) ? 'okey' : 'normal');
     setTimeout(() => endRound(mySeatIndex, finishType), 300);
     return;

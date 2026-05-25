@@ -707,6 +707,40 @@ try {
     } else {
       console.error('FAIL: Expected exactly 100 penalty points, got:', scoreAfterWildcardDiscard);
     }
+
+    // 12c: Test that discarding an işlek tile to win/finish the game does NOT trigger any penalty
+    global.setTotalScores([0, 0, 0, 0]);
+    global.setRoundPenalties([0, 0, 0, 0]);
+    global.setCurrentTurn(0);
+    pState12.opened = true;
+    pState12.openingType = 'series';
+    global.setHasDrawn(true);
+    global.setSelectedIndex(0);
+
+    // Set a dummy deck to prevent deck running out when bots trigger
+    global.setDeck([
+      { id: 400, num: 2, color: 'red' },
+      { id: 401, num: 3, color: 'red' },
+      { id: 402, num: 4, color: 'red' },
+      { id: 403, num: 5, color: 'red' },
+      { id: 404, num: 6, color: 'red' },
+      { id: 405, num: 7, color: 'red' }
+    ]);
+
+    // Ensure all rack slots are empty except slot 0 which has the işlek Red 4
+    for (let i = 0; i < 40; i++) {
+      global.setRackSlot(i, null);
+    }
+    global.setRackSlot(0, { id: 303, num: 4, color: 'red' });
+
+    global.triggerDiscardTile();
+    let scoreAfterFinishingDiscard = global.getRoundPenalties()[0];
+    console.log('Player round penalties after finishing discard:', scoreAfterFinishingDiscard);
+    if (scoreAfterFinishingDiscard === 0) {
+      console.log('PASS: Discarding an işlek tile as the winning tile does not trigger any penalty!');
+    } else {
+      console.error('FAIL: Expected 0 penalty points, got:', scoreAfterFinishingDiscard);
+    }
     // Test Case 13: Scoreboard Dropdown Box (Puan Durumu)
     console.log('\n--- Test Case 13: Scoreboard Dropdown Box ---');
     
