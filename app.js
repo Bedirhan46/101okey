@@ -2485,12 +2485,25 @@ function tileCanLayOff(tile) {
       }
     }
     const tiles = group.tiles;
+    
     // Try prepend
     const prepend = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, i) => ({ ...t, slotIndex: i + 1 }))];
     if (validateConsecutiveRun(prepend).valid || validateSameNumberSet(prepend).valid) return true;
+    
     // Try append
     const append = [...tiles.map((t, i) => ({ ...t, slotIndex: i })), { ...tile, slotIndex: tiles.length }];
     if (validateConsecutiveRun(append).valid || validateSameNumberSet(append).valid) return true;
+
+    // Try wildcard stealing (replacing wildcard with matching normal tile)
+    for (let idx = 0; idx < tiles.length; idx++) {
+      let t = tiles[idx];
+      if (isWildcard(t)) {
+        let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+        if (validateConsecutiveRun(candidateTiles).valid || validateSameNumberSet(candidateTiles).valid) {
+          return true;
+        }
+      }
+    }
   }
   return false;
 }
@@ -2544,6 +2557,34 @@ function layOffTile(draggedIdx, groupIdx) {
   let appendValid = false;
   if (validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid) {
     appendValid = true;
+  }
+
+  // 3. Try wildcard stealing (replacing wildcard with matching normal tile)
+  let replacedIdx = -1;
+  let wildcardToSteal = null;
+  for (let idx = 0; idx < tiles.length; idx++) {
+    let t = tiles[idx];
+    if (isWildcard(t)) {
+      let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+      if (validateConsecutiveRun(candidateTiles).valid || validateSameNumberSet(candidateTiles).valid) {
+        replacedIdx = idx;
+        wildcardToSteal = t;
+        break;
+      }
+    }
+  }
+
+  if (replacedIdx !== -1 && wildcardToSteal !== null) {
+    // Perform replacement: swap the table wildcard for our normal tile
+    group.tiles[replacedIdx] = { ...tile, laidOff: true };
+    // Put stolen Okey back in player's rack
+    rackSlots[draggedIdx] = { ...wildcardToSteal, laidOff: false, facedown: false };
+    if (selectedIndex === draggedIdx) {
+      selectedIndex = null;
+    }
+    updateAll(`Yerdeki OKEY taşı çalındı, yerine ${tile.color.toUpperCase()} ${tile.num} işlendi.`);
+    uploadGameState();
+    return;
   }
 
   if (prependValid) {

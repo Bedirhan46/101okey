@@ -745,6 +745,78 @@ try {
     } else {
       console.error('FAIL: Scoreboard dropdown score synchronization incorrect!');
     }
+
+    // Test Case 14: Okey Wildcard Stealing (Okey Çalma / Değiştirme)
+    console.log('\n--- Test Case 14: Okey Wildcard Stealing ---');
+    
+    // Reset state
+    global.setPlayerOpened(true);
+    global.setHasDrawn(true);
+    let ogs = global.getOpenedGroups();
+    ogs.length = 0; // Clear existing groups
+
+    // 14a: Stealing Okey in a consecutive run (7-8-Okey-10 replaced by 9)
+    let wildcardOkey = { id: 999, num: 4, color: 'red', isOkey: true }; // Wildcard
+    let runGroup = {
+      player: 1,
+      type: 'series',
+      tiles: [
+        { id: 201, num: 7, color: 'red' },
+        { id: 202, num: 8, color: 'red' },
+        wildcardOkey,
+        { id: 204, num: 10, color: 'red' }
+      ]
+    };
+    ogs.push(runGroup);
+
+    // Place Red 9 in player's rack index 0
+    global.setRackSlot(0, { id: 203, num: 9, color: 'red' });
+
+    // Perform layoff (stealing wildcard)
+    global.triggerLayOffTile(0, 0);
+
+    let updatedRunGroup = ogs[0];
+    let stolenOkeyInRack = global.getRackSlots()[0];
+
+    console.log('Run group tiles after swap:', updatedRunGroup.tiles.map(t => `${t.color} ${t.num}`).join(', '));
+    console.log('Stolen tile in rack slot 0:', stolenOkeyInRack ? `id: ${stolenOkeyInRack.id}, isOkey: ${stolenOkeyInRack.isOkey}` : 'null');
+
+    if (updatedRunGroup.tiles[2].num === 9 && updatedRunGroup.tiles[2].color === 'red' && stolenOkeyInRack && stolenOkeyInRack.id === 999) {
+      console.log('PASS: Successfully replaced wildcard Okey in consecutive run and returned it to player rack!');
+    } else {
+      console.error('FAIL: Consecutive run Okey stealing failed!');
+    }
+
+    // 14b: Stealing Okey in a same-number set (Red 7 - Black 7 - Okey replaced by Blue 7)
+    let wildcardOkey2 = { id: 888, num: 4, color: 'red', isOkey: true }; // Wildcard
+    let setGroup = {
+      player: 2,
+      type: 'series',
+      tiles: [
+        { id: 301, num: 7, color: 'red' },
+        { id: 302, num: 7, color: 'black' },
+        wildcardOkey2
+      ]
+    };
+    ogs.push(setGroup);
+
+    // Place Blue 7 in player's rack index 1
+    global.setRackSlot(1, { id: 303, num: 7, color: 'blueText' });
+
+    // Perform layoff (stealing wildcard)
+    global.triggerLayOffTile(1, 1);
+
+    let updatedSetGroup = ogs[1];
+    let stolenOkeyInRack2 = global.getRackSlots()[1];
+
+    console.log('Set group tiles after swap:', updatedSetGroup.tiles.map(t => `${t.color} ${t.num}`).join(', '));
+    console.log('Stolen tile in rack slot 1:', stolenOkeyInRack2 ? `id: ${stolenOkeyInRack2.id}, isOkey: ${stolenOkeyInRack2.isOkey}` : 'null');
+
+    if (updatedSetGroup.tiles[2].num === 7 && updatedSetGroup.tiles[2].color === 'blueText' && stolenOkeyInRack2 && stolenOkeyInRack2.id === 888) {
+      console.log('PASS: Successfully replaced wildcard Okey in same-number set and returned it to player rack!');
+    } else {
+      console.error('FAIL: Same-number set Okey stealing failed!');
+    }
   }
 } catch (e) {
   console.error('Error during execution:', e);
