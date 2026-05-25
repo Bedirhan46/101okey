@@ -1,3 +1,9 @@
+:root {
+  --tile-height: min(64px, calc((96vw - 68px) * 0.0727));
+  --rack-padding-top: 10px;
+  --row-gap: 14px;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', 'Outfit', Arial, sans-serif;
@@ -381,8 +387,8 @@ body {
   border-radius: 8px;
   box-shadow: inset 0 8px 16px rgba(0,0,0,0.6), 0 20px 45px rgba(0,0,0,0.85);
   width: min(980px, 96vw);
-  height: 172px;
-  padding: 10px 15px;
+  height: calc(2 * var(--tile-height) + var(--row-gap) + 2 * var(--rack-padding-top) + 10px);
+  padding: var(--rack-padding-top) 15px;
   pointer-events: auto;
   box-sizing: border-box;
   transform: scale(1.12);
@@ -401,35 +407,42 @@ body {
   z-index: 1;
 }
 
-.shelf-top { top: 76px; }
-.shelf-bottom { top: 156px; }
+.shelf-top {
+  top: calc(var(--rack-padding-top) + var(--tile-height) + 2px);
+}
+.shelf-bottom {
+  top: calc(var(--rack-padding-top) + 2 * var(--tile-height) + var(--row-gap) + 4px);
+}
 
 /* Flex Rack grid for holding tiles */
 .rack {
   position: relative;
   z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  row-gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  grid-template-rows: repeat(2, auto);
+  row-gap: var(--row-gap);
   column-gap: 2px;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 /* Okey Tile Styles */
 .tile {
-  width: 44px;
-  height: 64px;
+  width: 100%;
+  max-width: 44px;
+  aspect-ratio: 44 / 64;
+  height: auto;
   background: #fdfaf2;
   border-radius: 5px;
   border: 1px solid #d4c3a3;
-  border-bottom: 3.5px solid #baa687;
-  border-right: 1.5px solid #baa687;
+  border-bottom: calc(var(--tile-height) * 3.5 / 64) solid #baa687;
+  border-right: calc(var(--tile-height) * 1.5 / 64) solid #baa687;
   color: #111;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 25px;
+  font-size: calc(var(--tile-height) * 0.39);
   font-weight: 900;
   box-shadow: 0 4px 6px rgba(0,0,0,0.35), inset 0 1px 0 #fff;
   position: relative;
@@ -440,7 +453,7 @@ body {
 
 /* Tile Selection shift */
 .selected {
-  transform: translateY(-16px);
+  transform: translateY(calc(var(--tile-height) * -16 / 64));
   box-shadow: 0 10px 20px rgba(0,0,0,0.6);
   outline: 2px solid #ffe600;
 }
@@ -491,9 +504,9 @@ body {
 .tile:not(.joker-tile):not(.empty-tile)::after {
   content: "";
   position: absolute;
-  bottom: 7px;
-  width: 9px;
-  height: 9px;
+  bottom: calc(var(--tile-height) * 7 / 64);
+  width: calc(var(--tile-height) * 9 / 64);
+  height: calc(var(--tile-height) * 9 / 64);
   background-color: currentColor;
   border-radius: 50%;
   box-shadow: inset 0 1px 1px rgba(0,0,0,0.3);
@@ -501,7 +514,7 @@ body {
 
 /* Joker Tile specific rendering */
 .joker-tile {
-  font-size: 10px !important;
+  font-size: calc(var(--tile-height) * 10 / 64) !important;
   font-weight: 800;
   color: #111 !important;
   display: flex;
@@ -511,7 +524,7 @@ body {
 }
 
 .joker-tile .star {
-  font-size: 16px;
+  font-size: calc(var(--tile-height) * 16 / 64);
   margin-top: 1px;
   color: #111;
 }
@@ -523,9 +536,9 @@ body {
 
 .wildcard-tile .star {
   position: absolute;
-  top: 4px;
-  right: 5px;
-  font-size: 14px;
+  top: calc(var(--tile-height) * 4 / 64);
+  right: calc(var(--tile-height) * 5 / 64);
+  font-size: calc(var(--tile-height) * 14 / 64);
   color: currentColor;
 }
 
@@ -537,8 +550,10 @@ body {
 
 /* Empty tile slot display */
 .empty-tile {
-  width: 44px;
-  height: 64px;
+  width: 100%;
+  max-width: 44px;
+  aspect-ratio: 44 / 64;
+  height: auto;
   background: rgba(0, 0, 0, 0.35);
   border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: 5px;
@@ -944,12 +959,10 @@ body {
   .message-banner  { top: 20px; bottom: auto; }
   .opened-zone-p0  { bottom: 50px; }
 
-  .rack-wood { height: 140px; transform: scale(1.08); }
-  .shelf-top { top: 62px; }
-  .shelf-bottom { top: 126px; }
-
-  .tile, .empty-tile { width: 38px; height: 54px; }
-  .tile { font-size: 20px; }
+  :root {
+    --tile-height: min(54px, calc((96vw - 68px) * 0.0727));
+  }
+  .rack-wood { transform: scale(1.08); }
   .btn-action { padding: 8px 15px; font-size: 13.5px; }
   .btn-svg { width: 12px; height: 12px; }
   .logo-top { font-size: 36px; }
@@ -963,12 +976,10 @@ body {
   .message-banner  { top: 15px; bottom: auto; }
   .opened-zone-p0  { bottom: 40px; }
 
-  .rack-wood { height: 120px; transform: scale(1.05); }
-  .shelf-top { top: 52px; }
-  .shelf-bottom { top: 108px; }
-
-  .tile, .empty-tile { width: 32px; height: 46px; }
-  .tile { font-size: 17px; }
+  :root {
+    --tile-height: min(46px, calc((96vw - 68px) * 0.0727));
+  }
+  .rack-wood { transform: scale(1.05); }
   .btn-action { padding: 6px 12px; font-size: 12px; }
   .logo-top { font-size: 28px; }
 }
@@ -980,11 +991,11 @@ body {
   .btn-action { padding: 8px 12px; font-size: 12px; }
   .logo-top { font-size: 30px; }
   .logo-bottom { font-size: 11px; letter-spacing: 3px; }
-  .rack-wood { height: 130px; transform: scale(1.05); }
-  .shelf-top { top: 58px; }
-  .shelf-bottom { top: 118px; }
-  .tile, .empty-tile { width: 34px; height: 50px; }
-  .tile { font-size: 18px; }
+  
+  :root {
+    --tile-height: min(50px, calc((96vw - 68px) * 0.0727));
+  }
+  .rack-wood { transform: none !important; }
   .message-banner { top: 15px; bottom: auto; font-size: 11.5px; padding: 5px 12px; white-space: normal; max-width: 90vw; text-align: center; }
   .opened-zone-p3 { left: 100px; }
   .opened-zone-p1 { right: 100px; }
