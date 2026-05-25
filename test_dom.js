@@ -787,7 +787,7 @@ try {
       console.error('FAIL: Consecutive run Okey stealing failed!');
     }
 
-    // 14b: Stealing Okey in a same-number set (Red 7 - Black 7 - Okey replaced by Blue 7)
+    // 14b: Stealing Okey in a same-number set (Red 7 - Black 7 - Okey)
     let wildcardOkey2 = { id: 888, num: 4, color: 'red', isOkey: true }; // Wildcard
     let setGroup = {
       player: 2,
@@ -802,20 +802,37 @@ try {
 
     // Place Blue 7 in player's rack index 1
     global.setRackSlot(1, { id: 303, num: 7, color: 'blueText' });
+    // Place Yellow 7 in player's rack index 2
+    global.setRackSlot(2, { id: 304, num: 7, color: 'yellow' });
 
-    // Perform layoff (stealing wildcard)
-    global.triggerLayOffTile(1, 1);
-
+    // Step 1: Lay off Yellow 7 first (should append/prepend normally, leaving Okey in group)
+    global.triggerLayOffTile(2, 1);
     let updatedSetGroup = ogs[1];
+    let rackSlot2 = global.getRackSlots()[2];
+
+    console.log('Set group tiles after appending Yellow 7:', updatedSetGroup.tiles.map(t => `${t.color} ${t.num}`).join(', '));
+    console.log('Rack slot 2 after appending Yellow 7 (should be null):', rackSlot2);
+
+    let appendOk = (updatedSetGroup.tiles.length === 4 && rackSlot2 === null);
+    if (appendOk) {
+      console.log('PASS: Successfully appended Yellow 7 to same-number set!');
+    } else {
+      console.error('FAIL: Appending Yellow 7 failed!');
+    }
+
+    // Step 2: Lay off Blue 7 (should replace Okey since the group has 4 tiles, and retrieve Okey to slot 1)
+    global.triggerLayOffTile(1, 1);
+    let finalSetGroup = ogs[1];
     let stolenOkeyInRack2 = global.getRackSlots()[1];
 
-    console.log('Set group tiles after swap:', updatedSetGroup.tiles.map(t => `${t.color} ${t.num}`).join(', '));
-    console.log('Stolen tile in rack slot 1:', stolenOkeyInRack2 ? `id: ${stolenOkeyInRack2.id}, isOkey: ${stolenOkeyInRack2.isOkey}` : 'null');
+    console.log('Set group tiles after final swap:', finalSetGroup.tiles.map(t => `${t.color} ${t.num}`).join(', '));
+    console.log('Rack slot 1 after final swap (should be Okey id 888):', stolenOkeyInRack2 ? `id: ${stolenOkeyInRack2.id}` : 'null');
 
-    if (updatedSetGroup.tiles[2].num === 7 && updatedSetGroup.tiles[2].color === 'blueText' && stolenOkeyInRack2 && stolenOkeyInRack2.id === 888) {
-      console.log('PASS: Successfully replaced wildcard Okey in same-number set and returned it to player rack!');
+    let successOk = (finalSetGroup.tiles.length === 4 && finalSetGroup.tiles.some(t => t.id === 303) && stolenOkeyInRack2 && stolenOkeyInRack2.id === 888);
+    if (successOk) {
+      console.log('PASS: Successfully replaced wildcard Okey in completed 4-tile same-number set and returned it to player rack!');
     } else {
-      console.error('FAIL: Same-number set Okey stealing failed!');
+      console.error('FAIL: Same-number set Okey stealing failed after set completion!');
     }
   }
 } catch (e) {

@@ -2539,7 +2539,9 @@ function tileCanLayOff(tile) {
       let t = tiles[idx];
       if (isWildcard(t)) {
         let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
-        if (validateConsecutiveRun(candidateTiles).valid || validateSameNumberSet(candidateTiles).valid) {
+        let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+        let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+        if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
           return true;
         }
       }
@@ -2606,7 +2608,9 @@ function layOffTile(draggedIdx, groupIdx) {
     let t = tiles[idx];
     if (isWildcard(t)) {
       let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
-      if (validateConsecutiveRun(candidateTiles).valid || validateSameNumberSet(candidateTiles).valid) {
+      let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+      let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+      if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
         replacedIdx = idx;
         wildcardToSteal = t;
         break;
