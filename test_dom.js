@@ -39,6 +39,9 @@ const elements = {
   'score-p1': makeMockElement(),
   'score-p2': makeMockElement(),
   'score-p3': makeMockElement(),
+  'btn-open-series': makeMockElement(),
+  'btn-open-pairs': makeMockElement(),
+  'btn-auto-layoff': makeMockElement({ style: { display: '' } }),
   'rack': makeMockElement({
     innerHTML: '',
     appendChild: (node) => {
@@ -115,6 +118,11 @@ try {
     global.setBotOpenedThisTurn = (idx, val) => { botOpenedThisTurn[idx] = val; };
     global.triggerEndRound = (winnerId, finishType) => endRound(winnerId, finishType);
     global.getTotalScores = () => totalScores;
+    global.triggerAutoLayOffAll = () => autoLayOffAll();
+    global.triggerUpdateButtonsState = () => updateButtonsState();
+    global.setPlayerOpeningType = (val) => { player.openingType = val; };
+    global.setPlayerScore = (val) => { player.score = val; };
+    global.setPlayerPairs = (val) => { player.pairs = val; };
     global.setTotalScores = (val) => { totalScores = val; };
     global.getRoundPenalties = () => roundPenalties;
     global.setRoundPenalties = (val) => { roundPenalties = val; };
@@ -867,6 +875,93 @@ try {
       console.log('PASS: Successfully replaced wildcard Okey in completed 4-tile same-number set and returned it to player rack!');
     } else {
       console.error('FAIL: Same-number set Okey stealing failed after set completion!');
+    }
+
+    // Test Case 15: Open Hand Buttons State, Auto Layoff Button, and Red Dot Indicators
+    console.log('\n--- Test Case 15: Open Hand Buttons, Auto-Layoff and Red Dots ---');
+
+    // 15a: Test open hand buttons disabling/enabling based on score/pairs
+    global.setPlayerOpened(false);
+    global.setPlayerOpeningType(null);
+    global.setHasDrawn(true);
+    
+    // Low score: buttons should be disabled
+    global.setPlayerScore(80);
+    global.setPlayerPairs(3);
+    global.triggerUpdateButtonsState();
+    
+    let btnSeries = elements['btn-open-series'];
+    let btnPairs = elements['btn-open-pairs'];
+    let btnAutoLayoff = elements['btn-auto-layoff'];
+
+    if (btnSeries.classList.contains('disabled-btn') && btnPairs.classList.contains('disabled-btn')) {
+      console.log('PASS: Open hand buttons are disabled when thresholds are not met!');
+    } else {
+      console.error('FAIL: Open hand buttons should be disabled!');
+    }
+
+    // High score: Series Open button should be enabled
+    global.setPlayerScore(105);
+    global.triggerUpdateButtonsState();
+    if (!btnSeries.classList.contains('disabled-btn') && btnPairs.classList.contains('disabled-btn')) {
+      console.log('PASS: Seri Aç button enabled when score >= 101!');
+    } else {
+      console.error('FAIL: Seri Aç button should be enabled!');
+    }
+
+    // High pairs: Pairs Open button should be enabled
+    global.setPlayerScore(80);
+    global.setPlayerPairs(6);
+    global.triggerUpdateButtonsState();
+    if (btnSeries.classList.contains('disabled-btn') && !btnPairs.classList.contains('disabled-btn')) {
+      console.log('PASS: Çift Aç button enabled when pairs >= 5!');
+    } else {
+      console.error('FAIL: Çift Aç button should be enabled!');
+    }
+
+    // 15b: Test "İşlekleri İşle" button visibility and red dots on layoffable tiles
+    global.setPlayerOpened(true); // Player has opened
+    global.setPlayerOpeningType('series');
+    global.triggerUpdateButtonsState();
+    
+    if (btnAutoLayoff.style.display === 'inline-flex') {
+      console.log('PASS: "İşlekleri İşle" button is visible after player opens their hand!');
+    } else {
+      console.error('FAIL: "İşlekleri İşle" button should be visible!');
+    }
+
+    // Setup an opened group: Red 5-6-7 on table
+    ogs.length = 0;
+    ogs.push({
+      player: 1,
+      type: 'series',
+      tiles: [
+        { id: 401, num: 5, color: 'red' },
+        { id: 402, num: 6, color: 'red' },
+        { id: 403, num: 7, color: 'red' }
+      ]
+    });
+
+    // Place Red 8 (layoffable/işlek) in player's rack at slot 0
+    // and Blue 3 (not layoffable) at slot 1
+    global.setRackSlot(0, { id: 404, num: 8, color: 'red' });
+    global.setRackSlot(1, { id: 405, num: 3, color: 'blueText' });
+
+    // Force DOM rerender to trigger red dot placement
+    global.triggerRecalculateScore();
+    
+    // 15c: Test autoLayOffAll functionality
+    console.log('Rack slots before auto-layoff:', global.getRackSlots().map(t => t ? `${t.color} ${t.num}` : 'null').slice(0, 3).join(', '));
+    global.triggerAutoLayOffAll();
+    
+    let rackSlotsAfter = global.getRackSlots();
+    console.log('Rack slots after auto-layoff:', rackSlotsAfter.map(t => t ? `${t.color} ${t.num}` : 'null').slice(0, 3).join(', '));
+    console.log('Opened group tiles after auto-layoff:', ogs[0].tiles.map(t => `${t.color} ${t.num}`).join(', '));
+
+    if (rackSlotsAfter[0] === null && ogs[0].tiles.length === 4 && ogs[0].tiles[3].num === 8) {
+      console.log('PASS: autoLayOffAll successfully processed all layoffable tiles automatically!');
+    } else {
+      console.error('FAIL: autoLayOffAll did not process layoffable tiles correctly!');
     }
   }
 } catch (e) {

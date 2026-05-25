@@ -582,6 +582,12 @@ function renderHand() {
         slotDiv.innerHTML = tile.num;
       }
 
+      if (openedGroups && openedGroups.length > 0 && tileCanLayOff(tile)) {
+        const dot = document.createElement("span");
+        dot.className = "islek-dot";
+        slotDiv.appendChild(dot);
+      }
+
       if (tile.facedown) {
         slotDiv.classList.add("facedown-tile");
       }
@@ -2657,6 +2663,178 @@ function layOffTile(draggedIdx, groupIdx) {
   uploadGameState();
 }
 
+function autoLayOffAll() {
+  if (currentTurn !== mySeatIndex) {
+    showMessage("Sıra sizde değil! Taş işleyemezsiniz.");
+    return;
+  }
+  if (!hasDrawn) {
+    showMessage("Önce yerden veya yandan taş çekmelisiniz!");
+    return;
+  }
+  if (!player.opened) {
+    showMessage("İşlek işlemek için önce kendi elinizi açmış olmalısınız!");
+    return;
+  }
+
+  let laidOffAny = false;
+  let messages = [];
+
+  let maxPasses = 40;
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let laidOffThisPass = false;
+    for (let slotIdx = 0; slotIdx < rackSlots.length; slotIdx++) {
+      let tile = rackSlots[slotIdx];
+      if (!tile) continue;
+
+      for (let groupIdx = 0; groupIdx < openedGroups.length; groupIdx++) {
+        let group = openedGroups[groupIdx];
+        
+        if (player.openingType === 'pairs') {
+          if (group.type !== 'pair') continue;
+        } else if (player.openingType === 'series') {
+          if (group.type === 'pair') {
+            if (!botOpeningType.includes('pairs')) continue;
+          }
+        }
+
+        let tiles = group.tiles;
+
+        // Try Wildcard replacement first (steals the wildcard back to rack)
+        let replacedIdx = -1;
+        let wildcardToSteal = null;
+        for (let idx = 0; idx < tiles.length; idx++) {
+          let t = tiles[idx];
+          if (isWildcard(t)) {
+            let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+            let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+            let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+            if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
+              replacedIdx = idx;
+              wildcardToSteal = t;
+              break;
+            }
+          }
+        }
+
+        if (replacedIdx !== -1 && wildcardToSteal !== null) {
+          group.tiles[replacedIdx] = { ...tile, laidOff: true };
+          rackSlots[slotIdx] = { ...wildcardToSteal, laidOff: false, facedown: false };
+          if (selectedIndex === slotIdx) selectedIndex = null;
+          messages.push(`Yerdeki OKEY taşı çalındı, yerine ${tile.color.toUpperCase()} ${tile.num} işlendi.`);
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+
+        // Try prepend
+        let prependTiles = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, idx) => ({ ...t, slotIndex: idx + 1 }))];
+        let prependValid = validateConsecutiveRun(prependTiles).valid || validateSameNumberSet(prependTiles).valid;
+        if (prependValid) {
+          group.tiles.unshift({ ...tile, laidOff: true });
+          rackSlots[slotIdx] = null;
+          if (selectedIndex === slotIdx) selectedIndex = null;
+          messages.push(`Taş seriye işlendi: ${tile.fake ? 'Sahte Okey' : tile.color.toUpperCase() + ' ' + tile.num}`);
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+
+        // Try append
+        let appendTiles = [...tiles.map((t, idx) => ({ ...t, slotIndex: idx })), { ...tile, slotIndex: tiles.length }];
+        let appendValid = validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid;
+        if (appendValid) {
+          group.tiles.push({ ...tile, laidOff: true });
+          rackSlots[slotIdx] = null;
+          if (selectedIndex === slotIdx) selectedIndex = null;
+          messages.push(`Taş seriye işlendi: ${tile.fake ? 'Sahte Okey' : tile.color.toUpperCase() + ' ' + tile.num}`);
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+      }
+    }
+    if (!laidOffThisPass) {
+      break;
+    }
+  }
+
+  if (laidOffAny) {
+    updateAll(messages[messages.length - 1]);
+    uploadGameState();
+  } else {
+    showMessage("Elinizde işlenebilecek taş bulunmuyor.");
+  }
+}
+
+function updateButtonsState() {
+  const btnSeries = document.getElementById("btn-open-series");
+  const btnPairs = document.getElementById("btn-open-pairs");
+  const btnAutoLayoff = document.getElementById("btn-auto-layoff");
+
+  if (!btnSeries || !btnPairs) return;
+
+  const isMyTurn = (currentTurn === mySeatIndex);
+  
+  if (btnAutoLayoff) {
+    if (player.opened && isMyTurn && hasDrawn) {
+      btnAutoLayoff.style.display = "inline-flex";
+    } else {
+      btnAutoLayoff.style.display = "none";
+    }
+  }
+
+  let seriesEnabled = false;
+  if (isMyTurn && hasDrawn) {
+    if (!player.opened) {
+      let meetsScore = (player.score >= 101);
+      let discardOk = true;
+      if (tookDiscardThisTurn && discardedTileTaken) {
+        discardOk = isDiscardTileUsedInMelds('series', discardedTileTaken);
+      }
+      if (meetsScore && discardOk) {
+        seriesEnabled = true;
+      }
+    } else {
+      if (player.openingType === 'series') {
+        seriesEnabled = true;
+      }
+    }
+  }
+
+  let pairsEnabled = false;
+  if (isMyTurn && hasDrawn) {
+    if (!player.opened) {
+      let meetsPairs = (player.pairs >= 5);
+      let discardOk = true;
+      if (tookDiscardThisTurn && discardedTileTaken) {
+        discardOk = isDiscardTileUsedInMelds('pairs', discardedTileTaken);
+      }
+      if (meetsPairs && discardOk) {
+        pairsEnabled = true;
+      }
+    } else {
+      if (player.openingType === 'pairs') {
+        pairsEnabled = true;
+      }
+    }
+  }
+
+  btnSeries.disabled = !seriesEnabled;
+  if (seriesEnabled) {
+    btnSeries.classList.remove("disabled-btn");
+  } else {
+    btnSeries.classList.add("disabled-btn");
+  }
+
+  btnPairs.disabled = !pairsEnabled;
+  if (pairsEnabled) {
+    btnPairs.classList.remove("disabled-btn");
+  } else {
+    btnPairs.classList.add("disabled-btn");
+  }
+}
+
 /**
  * Updates all visual aspects of the board
  */
@@ -2687,6 +2865,8 @@ function updateAll(statusText) {
       scoreEl.textContent = `${totalScores[i] > 0 ? '+' : ''}${totalScores[i]}`;
     }
   }
+
+  updateButtonsState();
 }
 
 function toggleScoreDropdown(event) {
@@ -2733,6 +2913,7 @@ window.socketCreateRoom = socketCreateRoom;
 window.socketJoinRoom = socketJoinRoom;
 window.socketStartGame = socketStartGame;
 window.playOffline = playOffline;
+window.autoLayOffAll = autoLayOffAll;
 
 if (typeof window !== 'undefined' && window.location && window.location.search.includes('offline')) {
   setTimeout(() => {
