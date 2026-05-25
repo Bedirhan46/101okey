@@ -180,21 +180,11 @@ io.on('connection', (socket) => {
           gameState.botHands = room.gameState.botHands;
         }
 
-        // 3. Merge openedGroups to preserve groups opened by other players
-        if (gameState.openedGroups && room.gameState.openedGroups) {
-          const otherPlayersGroups = room.gameState.openedGroups.filter(g => g.player !== currentSeatIndex);
-          const myGroups = gameState.openedGroups.filter(g => g.player === currentSeatIndex);
-          gameState.openedGroups = [...otherPlayersGroups, ...myGroups];
-        }
+        // 3. Do NOT merge openedGroups: players can lay off (işlek işlemek) tiles on other players' groups.
+        // The active player's client uploads the authoritative state of openedGroups.
 
-        // 4. Merge discardPiles to prevent concurrent overrides
-        if (gameState.discardPiles && room.gameState.discardPiles) {
-          for (let i = 0; i < 4; i++) {
-            if (i !== currentSeatIndex) {
-              gameState.discardPiles[i] = room.gameState.discardPiles[i];
-            }
-          }
-        }
+        // 4. Do NOT merge discardPiles: players can take the discarded tile of another player.
+        // The active player's client uploads the authoritative state of discardPiles.
 
         // 5. Merge playersOpened arrays to prevent concurrent overrides
         if (gameState.playersOpened && room.gameState.playersOpened) {

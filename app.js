@@ -1421,8 +1421,13 @@ function extractMeldsFromRack(type) {
     }
 
     if (isValidMeld) {
+      let meldType = 'pair';
+      if (type === 'series') {
+        meldType = validateConsecutiveRun(group).valid ? 'run' : 'group';
+      }
       openedGroups.push({
         player: mySeatIndex, // SEN
+        type: meldType,
         tiles: group.map(t => ({ ...t }))
       });
       group.forEach(t => {
@@ -2727,6 +2732,11 @@ window.socketJoinRoom = socketJoinRoom;
 window.socketStartGame = socketStartGame;
 window.playOffline = playOffline;
 
+if (typeof window !== 'undefined' && window.location && window.location.search.includes('offline')) {
+  setTimeout(() => {
+    if (typeof playOffline === 'function') playOffline();
+  }, 150);
+}
 
 // Initial game trigger on DOM Ready
 if (document.readyState === "loading") {

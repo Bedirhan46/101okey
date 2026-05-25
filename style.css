@@ -15,7 +15,7 @@ body {
 .game {
   width: 1280px;
   height: 800px;
-  background: radial-gradient(circle, #0e542d 0%, #051d10 85%);
+  background: radial-gradient(circle at 50% 50%, #15202e 0%, #070b10 100%);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -162,10 +162,17 @@ body {
 /* Table Felt Board Area */
 .table-felt {
   position: absolute;
-  top: 130px;
-  bottom: 130px;
-  left: 20px;
-  right: 20px;
+  top: 90px;
+  bottom: 335px;
+  left: 30px;
+  right: 30px;
+  background: radial-gradient(circle, #0f5c32 0%, #063019 100%);
+  border: 14px solid #5a3014;
+  border-color: #6e3b19 #4c260f #33190a #4c260f;
+  border-radius: 24px;
+  box-shadow: inset 0 10px 40px rgba(0,0,0,0.8), 0 25px 50px rgba(0,0,0,0.85);
+  transform: perspective(900px) rotateX(24deg);
+  transform-style: preserve-3d;
 }
 
 /* Giant Table Felt Watermark Logo */
@@ -213,36 +220,42 @@ body {
 .side-rack {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
+  width: 44px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  background: linear-gradient(90deg, #44220c, #241104);
-  border-left: 2.5px solid #824b21;
-  border-right: 2.5px solid #824b21;
-  border-radius: 4px;
-  padding: 6px 3px;
-  box-shadow: 0 5px 12px rgba(0,0,0,0.55);
+  gap: 4px;
+  background: linear-gradient(90deg, #502e14 0%, #29170a 100%);
+  border: 3.5px solid #7d441c;
+  border-radius: 6px;
+  padding: 8px 4px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  transform-style: preserve-3d;
 }
 
-.rack-left { left: 15px; }
-.rack-right { right: 15px; }
+.rack-left {
+  left: 24px;
+  transform: translateY(-50%) rotateY(68deg);
+}
+
+.rack-right {
+  right: 24px;
+  transform: translateY(-50%) rotateY(-68deg);
+}
 
 .top-rack-back {
   position: absolute;
-  top: 10px;
+  top: 15px;
   left: 50%;
-  transform: translateX(-50%);
-  height: 34px;
+  transform: translateX(-50%) rotateX(-35deg);
+  height: 44px;
   display: flex;
-  gap: 3px;
-  background: linear-gradient(180deg, #44220c, #241104);
-  border-top: 2.5px solid #824b21;
-  border-bottom: 2.5px solid #824b21;
-  border-radius: 4px;
-  padding: 3px 6px;
-  box-shadow: 0 5px 12px rgba(0,0,0,0.55);
+  gap: 5px;
+  background: linear-gradient(180deg, #502e14 0%, #29170a 100%);
+  border: 3.5px solid #7d441c;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  transform-style: preserve-3d;
 }
 
 .tile-back {
@@ -250,16 +263,25 @@ body {
   border: 1px solid #361703;
   border-radius: 2px;
   box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.3);
+  box-sizing: border-box;
 }
 
-.rack-left .tile-back, .rack-right .tile-back {
-  width: 26px;
-  height: 15px;
+.rack-left .tile-back {
+  width: 30px;
+  height: 18px;
+  border-right: 3px solid #fdfaf2;
+}
+
+.rack-right .tile-back {
+  width: 30px;
+  height: 18px;
+  border-left: 3px solid #fdfaf2;
 }
 
 .top-rack-back .tile-back {
-  width: 15px;
-  height: 26px;
+  width: 18px;
+  height: 30px;
+  border-bottom: 3px solid #fdfaf2;
 }
 
 /* Center Play Area & stacks */
@@ -323,19 +345,19 @@ body {
 /* Message Banner */
 .message-banner {
   position: absolute;
-  bottom: 350px;
+  top: 25px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   padding: 8px 24px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 14.5px;
   color: #ffffff;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-  z-index: 10;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+  z-index: 20;
   white-space: nowrap;
 }
 
@@ -344,10 +366,11 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 20px;
+  bottom: 125px;
   display: flex;
   justify-content: center;
-  z-index: 8;
+  z-index: 12;
+  perspective: 1200px;
   pointer-events: none;
 }
 
@@ -356,12 +379,15 @@ body {
   background: linear-gradient(180deg, #502e14 0%, #29170a 100%);
   border: 4px solid #7d441c;
   border-radius: 8px;
-  box-shadow: inset 0 8px 16px rgba(0,0,0,0.6), 0 8px 16px rgba(0,0,0,0.65);
+  box-shadow: inset 0 8px 16px rgba(0,0,0,0.6), 0 20px 45px rgba(0,0,0,0.85);
   width: min(980px, 96vw);
   height: 172px;
   padding: 10px 15px;
   pointer-events: auto;
   box-sizing: border-box;
+  transform: perspective(1000px) rotateX(15deg) scale(1.12);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
 }
 
 /* Realistic Rack Shelf Ledges */
@@ -397,17 +423,20 @@ body {
   height: 64px;
   background: #fdfaf2;
   border-radius: 5px;
-  border: 1px solid #baa687;
+  border: 1px solid #d4c3a3;
+  border-bottom: 3.5px solid #baa687;
+  border-right: 1.5px solid #baa687;
   color: #111;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 25px;
   font-weight: 900;
-  box-shadow: 0 3.5px 5px rgba(0,0,0,0.45), inset 0 1.5px 1.5px rgba(255,255,255,0.9), inset 0 -1.5px 1.5px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.35), inset 0 1px 0 #fff;
   position: relative;
   cursor: pointer;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 /* Tile Selection shift */
@@ -522,28 +551,29 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Controls and Buttons Area (Top Center) */
+/* Controls and Buttons Area (Bottom Center) */
 .controls-area {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: center;
   align-items: center;
   gap: 8px;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.controls-row {
-  display: flex;
-  gap: 15px;
+  z-index: 15;
+  pointer-events: auto;
+  width: auto;
 }
 
 .btn-action {
   border: 0;
   color: white;
   font-weight: 800;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 11px 18px;
+  border-radius: 12px;
+  font-size: 14.5px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -552,6 +582,7 @@ body {
   transition: transform 0.1s, box-shadow 0.1s;
   pointer-events: auto;
   font-family: 'Outfit', sans-serif;
+  white-space: nowrap;
 }
 
 .btn-action:active {
@@ -907,53 +938,53 @@ body {
    TABLET & SMALL SCREEN RESPONSIVE RULES
    ═══════════════════════════════════════ */
 @media (max-height: 850px) {
-  .rack-container  { bottom: 15px; }
-  .controls-area   { gap: 5px; }
-  .table-felt      { bottom: 110px; }
-  .message-banner  { bottom: 270px; }
-  .opened-zone-p0  { bottom: 60px; }
+  .rack-container  { bottom: 95px; }
+  .controls-area   { bottom: 12px; gap: 6px; }
+  .table-felt      { bottom: 275px; }
+  .message-banner  { top: 20px; bottom: auto; }
+  .opened-zone-p0  { bottom: 50px; }
 
-  .rack-wood { height: 150px; }
-  .shelf-top { top: 66px; }
-  .shelf-bottom { top: 136px; }
+  .rack-wood { height: 140px; transform: perspective(800px) rotateX(12deg) scale(1.08); }
+  .shelf-top { top: 62px; }
+  .shelf-bottom { top: 126px; }
 
-  .tile { width: 40px; height: 58px; font-size: 22px; }
-  .btn-action { padding: 6px 12px; font-size: 11px; }
-  .btn-svg { width: 13px; height: 13px; }
-  .logo-top { font-size: 40px; }
-  .logo-bottom { font-size: 13px; }
+  .tile { width: 38px; height: 54px; font-size: 20px; }
+  .btn-action { padding: 8px 15px; font-size: 13.5px; }
+  .btn-svg { width: 12px; height: 12px; }
+  .logo-top { font-size: 36px; }
+  .logo-bottom { font-size: 12px; }
 }
 
 @media (max-height: 700px) {
-  .rack-container  { bottom: 10px; }
-  .controls-area   { gap: 4px; }
-  .table-felt      { bottom: 90px; }
-  .message-banner  { bottom: 230px; }
-  .opened-zone-p0  { bottom: 55px; }
+  .rack-container  { bottom: 75px; }
+  .controls-area   { bottom: 10px; gap: 4px; }
+  .table-felt      { bottom: 220px; }
+  .message-banner  { top: 15px; bottom: auto; }
+  .opened-zone-p0  { bottom: 40px; }
 
-  .rack-wood { height: 130px; }
-  .shelf-top { top: 55px; }
-  .shelf-bottom { top: 116px; }
+  .rack-wood { height: 120px; transform: perspective(600px) rotateX(10deg) scale(1.05); }
+  .shelf-top { top: 52px; }
+  .shelf-bottom { top: 108px; }
 
-  .tile { width: 36px; height: 52px; font-size: 19px; }
-  .btn-action { padding: 5px 10px; font-size: 10px; }
-  .logo-top { font-size: 32px; }
+  .tile { width: 32px; height: 46px; font-size: 17px; }
+  .btn-action { padding: 6px 12px; font-size: 12px; }
+  .logo-top { font-size: 28px; }
 }
 
 @media (max-width: 768px) {
-  .players-box { width: 140px; font-size: 11px; }
-  .player-item { font-size: 11px; }
-  .controls-row { gap: 6px; flex-wrap: wrap; justify-content: center; }
-  .btn-action { padding: 7px 10px; font-size: 11px; }
-  .logo-top { font-size: 36px; }
-  .logo-bottom { font-size: 12px; letter-spacing: 4px; }
-  .rack-wood { height: 140px; }
-  .shelf-top { top: 60px; }
-  .shelf-bottom { top: 126px; }
-  .tile { width: 38px; height: 56px; font-size: 20px; }
-  .message-banner { font-size: 12px; padding: 6px 16px; white-space: normal; max-width: 90vw; text-align: center; }
-  .opened-zone-p3 { left: 110px; }
-  .opened-zone-p1 { right: 110px; }
+  .players-box { width: 130px; font-size: 10px; }
+  .player-item { font-size: 10.5px; }
+  .controls-area { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .btn-action { padding: 8px 12px; font-size: 12px; }
+  .logo-top { font-size: 30px; }
+  .logo-bottom { font-size: 11px; letter-spacing: 3px; }
+  .rack-wood { height: 130px; transform: perspective(700px) rotateX(10deg) scale(1.05); }
+  .shelf-top { top: 58px; }
+  .shelf-bottom { top: 118px; }
+  .tile { width: 34px; height: 50px; font-size: 18px; }
+  .message-banner { top: 15px; bottom: auto; font-size: 11.5px; padding: 5px 12px; white-space: normal; max-width: 90vw; text-align: center; }
+  .opened-zone-p3 { left: 100px; }
+  .opened-zone-p1 { right: 100px; }
 }
 
 /* Score Dropdown Box styling */

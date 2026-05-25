@@ -15,7 +15,7 @@ cmd = [
     "--no-sandbox",
     f"--screenshot={screenshot_path}",
     "--window-size=1920,1080",
-    f"file:///{html_path}"
+    f"file:///{html_path}?offline=1"
 ]
 
 print("Launching Chrome...")
@@ -36,7 +36,7 @@ cmd_dom = [
     "--disable-gpu",
     "--no-sandbox",
     "--dump-dom",
-    f"file:///{html_path}"
+    f"file:///{html_path}?offline=1"
 ]
 
 print("Dumping DOM...")
