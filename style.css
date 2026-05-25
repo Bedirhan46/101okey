@@ -544,6 +544,7 @@ body {
   border-radius: 5px;
   box-shadow: none;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .empty-tile:hover {
