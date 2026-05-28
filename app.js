@@ -761,10 +761,13 @@ function renderHand() {
       slotDiv.ondblclick = (e) => {
         e.stopPropagation();
 
-        if (isWildcard(tile)) {
-          toggleTileFacedown(index);
-        } else {
-          selectGroup(index);
+        let moved = doubleClickGroupMove(index);
+        if (!moved) {
+          if (isWildcard(tile)) {
+            toggleTileFacedown(index);
+          } else {
+            selectGroup(index);
+          }
         }
       };
     }
@@ -942,6 +945,96 @@ function selectGroup(index) {
   // Reset single selection
   selectedIndex = null;
   renderHand();
+}
+
+/**
+ * Moves a contiguous group of tiles on double-click to the first available empty slots on the rack.
+ * Tries to find space on the other shelf first to aid rack organization.
+ */
+function doubleClickGroupMove(index) {
+  if (rackSlots[index] === null) return false;
+
+  // Find start of contiguous block
+  let start = index;
+  while (start > 0 && rackSlots[start - 1] !== null) {
+    start--;
+  }
+
+  // Find end of contiguous block
+  let end = index;
+  while (end < 39 && rackSlots[end + 1] !== null) {
+    end++;
+  }
+
+  let L = end - start + 1;
+  if (L < 2) return false; // Must be a group of at least 2 tiles
+
+  let targetStart = -1;
+
+  // Helper to check if a range of length L starting at `t` is empty and doesn't overlap
+  function isRangeEmptyAndNonOverlapping(t) {
+    if (t + L > 40) return false;
+    for (let i = 0; i < L; i++) {
+      let idx = t + i;
+      if (rackSlots[idx] !== null) return false;
+      if (idx >= start && idx <= end) return false;
+    }
+    return true;
+  }
+
+  // Shelf 1: 0-19, Shelf 2: 20-39
+  let currentOnShelf1 = (start < 20);
+
+  // Strategy 1: Look on the other shelf first
+  if (currentOnShelf1) {
+    // Look on Shelf 2
+    for (let t = 20; t <= 40 - L; t++) {
+      if (isRangeEmptyAndNonOverlapping(t)) {
+        targetStart = t;
+        break;
+      }
+    }
+  } else {
+    // Look on Shelf 1
+    for (let t = 0; t <= 20 - L; t++) {
+      if (isRangeEmptyAndNonOverlapping(t)) {
+        targetStart = t;
+        break;
+      }
+    }
+  }
+
+  // Strategy 2: Look anywhere on the rack (excluding own range)
+  if (targetStart === -1) {
+    for (let t = 0; t <= 40 - L; t++) {
+      if (isRangeEmptyAndNonOverlapping(t)) {
+        targetStart = t;
+        break;
+      }
+    }
+  }
+
+  if (targetStart !== -1) {
+    // Extract tiles
+    let groupTiles = [];
+    for (let i = start; i <= end; i++) {
+      groupTiles.push(rackSlots[i]);
+      rackSlots[i] = null;
+    }
+
+    // Place them at target
+    for (let i = 0; i < L; i++) {
+      rackSlots[targetStart + i] = groupTiles[i];
+    }
+
+    // Reset selection and update UI
+    selectedIndex = null;
+    selectedGroupIndices = [];
+    updateAll();
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -3580,7 +3673,7 @@ window.socketStartGame = socketStartGame;
 window.playOffline = playOffline;
 window.autoLayOffAll = autoLayOffAll;
 window.rollDiceAll = rollDiceAll;
-window.finishDiceRollAndStart = finishDiceRollAndStart;
+window.finishDiceRollAndStart = finishDiceRollAndStart;window.doubleClickGroupMove = doubleClickGroupMove;
 
 if (typeof window !== 'undefined' && window.location && window.location.search.includes('offline')) {
   setTimeout(() => {

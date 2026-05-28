@@ -144,6 +144,7 @@ try {
     global.triggerRollDiceAll = () => rollDiceAll();
     global.triggerFinishDiceRollAndStart = () => finishDiceRollAndStart();
     global.triggerNextRound = () => nextRound();
+    global.doubleClickGroupMove = (idx) => doubleClickGroupMove(idx);
   `;
   
   eval(code);
@@ -1081,6 +1082,36 @@ try {
       console.log('PASS: nextRound updates starting player to the new winner (Player 3)!');
     } else {
       console.error('FAIL: nextRound winner starter update failed! Expected 3, got:', nextStartPlayer);
+    }
+
+    // --- Test Case 17: Double-Click Group Moving ---
+    console.log('\n--- Test Case 17: Double-Click Group Moving ---');
+    let testRack = Array(40).fill(null);
+    testRack[2] = { id: 101, num: 5, color: 'red' };
+    testRack[3] = { id: 102, num: 6, color: 'red' };
+    testRack[4] = { id: 103, num: 7, color: 'red' };
+    
+    // Clear and set the global rack slots using global.setRackSlot
+    for (let i = 0; i < 40; i++) {
+      global.setRackSlot(i, testRack[i]);
+    }
+    
+    // Call doubleClickGroupMove on slot 3 (part of the group [2,3,4])
+    let moveSuccess = global.doubleClickGroupMove(3);
+    let updatedRack = global.dumpState().rackSlots;
+    
+    if (moveSuccess && 
+        updatedRack[2] === null && updatedRack[3] === null && updatedRack[4] === null &&
+        updatedRack[20] !== null && updatedRack[20].id === 101 &&
+        updatedRack[21] !== null && updatedRack[21].id === 102 &&
+        updatedRack[22] !== null && updatedRack[22].id === 103) {
+      console.log('PASS: Contiguous group of tiles successfully moved to target empty slots on other shelf!');
+    } else {
+      console.error('FAIL: Double-click group move verification failed!', {
+        moveSuccess,
+        oldSlots: [updatedRack[2], updatedRack[3], updatedRack[4]],
+        newSlots: [updatedRack[20], updatedRack[21], updatedRack[22]]
+      });
     }
   }
 } catch (e) {
