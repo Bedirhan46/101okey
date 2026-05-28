@@ -3262,7 +3262,7 @@ function initSpecialDrags() {
   // ── 4. Player discard zone = drop target (rack tile → AT) ──
   const dzp0 = document.getElementById('discard-zone-p0');
   safeAddEvent(dzp0, 'dragover', (e) => {
-    if (currentTurn === 0 && hasDrawn) {
+    if (currentTurn === mySeatIndex && hasDrawn) {
       e.preventDefault();
       dzp0.classList.add('discard-drop-hover');
     }
@@ -3560,7 +3560,11 @@ function uploadGameState(initialHands = null) {
     diceRollState: diceRollState,
     roundStartPlayer: roundStartPlayer,
     lastRoundStartPlayer: lastRoundStartPlayer,
-    lastWinnerStarter: lastWinnerStarter
+    lastWinnerStarter: lastWinnerStarter,
+
+    hasDrawn: hasDrawn,
+    tookDiscardThisTurn: tookDiscardThisTurn,
+    discardedTileTaken: discardedTileTaken
   };
 
   socket.emit('sync_state', state);
@@ -3815,6 +3819,18 @@ function syncLocalStateFromServer(state) {
 
   let turnChanged = (currentTurn !== state.currentTurn);
   currentTurn = state.currentTurn;
+
+  // Sync turn-specific states
+  hasDrawn = state.hasDrawn !== undefined ? state.hasDrawn : false;
+  tookDiscardThisTurn = state.tookDiscardThisTurn !== undefined ? state.tookDiscardThisTurn : false;
+  discardedTileTaken = state.discardedTileTaken !== undefined ? state.discardedTileTaken : null;
+
+  if (roundNumber !== state.roundNumber) {
+    selectedIndex = null;
+    selectedGroupIndices = [];
+    playerOpeningScore = 0;
+    playerOpeningPairs = 0;
+  }
 
   roundNumber = state.roundNumber;
   totalScores = state.totalScores;
