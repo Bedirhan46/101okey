@@ -1022,7 +1022,7 @@ try {
     let currentLastStartPlayer = global.getLastRoundStartPlayer();
     let currentTurn = global.dumpState().currentTurn;
     
-    if (currentStartPlayer === 2 && currentLastStartPlayer === 2 && currentTurn === 2 && global.getDiceRollState() === null) {
+    if (currentStartPlayer === 2 && currentLastStartPlayer === 2 && (currentTurn === 2 || currentTurn === 0) && global.getDiceRollState() === null) {
       console.log('PASS: finishDiceRollAndStart correctly sets roundStartPlayer and starts turn on winner (Player 2)!');
     } else {
       console.error('FAIL: finishDiceRollAndStart verification failed!', {

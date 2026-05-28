@@ -221,6 +221,11 @@ function dealTiles() {
 
   updateTurnHighlight();
   updateAll("Taşlar dağıtıldı. Taşlarınızı taşımak veya grup seçmek için çift tıklayın.");
+
+  // If the starting player is a bot, trigger the bot turn from Host
+  if (isSeatBot(currentTurn) && mySeatIndex === 0) {
+    setTimeout(runBotTurn, 1000);
+  }
 }
 
 /**
