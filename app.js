@@ -1256,6 +1256,13 @@ function discardTile() {
     return;
   }
 
+  // If there are no tiles left in the deck, the round ends immediately after this discard!
+  if (deck.length === 0) {
+    showMessage("Yerde çekilecek taş kalmadı! El bitti.");
+    setTimeout(() => endRound(-1, 'normal'), 600);
+    return;
+  }
+
   // Pass turn to the next player
   passTurn();
 }
@@ -2955,6 +2962,13 @@ function runBotTurn() {
     if (hand.length === 0 && botOpened[currentTurn - 1]) {
       const botWinnerId = currentTurn;
       setTimeout(() => endRound(botWinnerId, 'normal'), 600);
+      return;
+    }
+
+    // If there are no tiles left in the deck, the round ends immediately after this discard!
+    if (deck.length === 0) {
+      showMessage("Yerde çekilecek taş kalmadı! El bitti.");
+      setTimeout(() => endRound(-1, 'normal'), 600);
       return;
     }
 
