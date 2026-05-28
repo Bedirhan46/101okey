@@ -145,6 +145,7 @@ try {
     global.triggerFinishDiceRollAndStart = () => finishDiceRollAndStart();
     global.triggerNextRound = () => nextRound();
     global.doubleClickGroupMove = (idx) => doubleClickGroupMove(idx);
+    global.sortSeries = () => sortSeries();
   `;
   
   eval(code);
@@ -1111,6 +1112,43 @@ try {
         moveSuccess,
         oldSlots: [updatedRack[2], updatedRack[3], updatedRack[4]],
         newSlots: [updatedRack[20], updatedRack[21], updatedRack[22]]
+      });
+    }
+
+    // --- Test Case 18: Consecutive Run Splitting in Sort Series ---
+    console.log('\n--- Test Case 18: Consecutive Run Splitting in Sort Series ---');
+    let testRack18 = Array(40).fill(null);
+    testRack18[0] = { id: 201, num: 1, color: 'red' };
+    testRack18[1] = { id: 202, num: 2, color: 'red' };
+    testRack18[2] = { id: 203, num: 3, color: 'red' };
+    testRack18[3] = { id: 204, num: 4, color: 'red' };
+    testRack18[4] = { id: 205, num: 5, color: 'red' };
+    testRack18[5] = { id: 206, num: 6, color: 'red' };
+
+    for (let i = 0; i < 40; i++) {
+      global.setRackSlot(i, testRack18[i]);
+    }
+
+    global.sortSeries();
+    let sortedRack18 = global.dumpState().rackSlots;
+
+    // We expect the first run (Red 1,2,3) to be at index 0, 1, 2.
+    // Index 3 should be null (gap).
+    // The second run (Red 4,5,6) should be at index 4, 5, 6.
+    // Index 7 should be null (gap).
+    if (sortedRack18[0] !== null && sortedRack18[0].id === 201 &&
+        sortedRack18[1] !== null && sortedRack18[1].id === 202 &&
+        sortedRack18[2] !== null && sortedRack18[2].id === 203 &&
+        sortedRack18[3] === null &&
+        sortedRack18[4] !== null && sortedRack18[4].id === 204 &&
+        sortedRack18[5] !== null && sortedRack18[5].id === 205 &&
+        sortedRack18[6] !== null && sortedRack18[6].id === 206) {
+      console.log('PASS: 6-tile consecutive run successfully split into two 3-tile runs!');
+    } else {
+      console.error('FAIL: 6-tile consecutive run split verification failed!', {
+        slot0: sortedRack18[0], slot1: sortedRack18[1], slot2: sortedRack18[2],
+        slot3: sortedRack18[3],
+        slot4: sortedRack18[4], slot5: sortedRack18[5], slot6: sortedRack18[6]
       });
     }
   }

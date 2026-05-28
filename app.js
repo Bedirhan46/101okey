@@ -3014,6 +3014,51 @@ function sortSeries() {
     }
   }
 
+  // Helper to split long consecutive runs into smaller sub-runs (max length 5, min length 3)
+  function splitRunIntoSizes(run) {
+    let L = run.length;
+    if (L <= 5) return [run];
+    
+    let partitionSizes;
+    if (L === 6)  partitionSizes = [3, 3];
+    else if (L === 7)  partitionSizes = [4, 3];
+    else if (L === 8)  partitionSizes = [4, 4];
+    else if (L === 9)  partitionSizes = [5, 4];
+    else if (L === 10) partitionSizes = [5, 5];
+    else if (L === 11) partitionSizes = [4, 4, 3];
+    else if (L === 12) partitionSizes = [4, 4, 4];
+    else if (L === 13) partitionSizes = [5, 4, 4];
+    else {
+      partitionSizes = [];
+      let temp = L;
+      while (temp > 0) {
+        if (temp >= 5) {
+          partitionSizes.push(5);
+          temp -= 5;
+        } else if (temp >= 3) {
+          partitionSizes.push(temp);
+          break;
+        } else {
+          if (partitionSizes.length > 0) {
+            partitionSizes[partitionSizes.length - 1] -= (3 - temp);
+            partitionSizes.push(3);
+          } else {
+            partitionSizes.push(temp);
+          }
+          break;
+        }
+      }
+    }
+
+    let result = [];
+    let startIndex = 0;
+    partitionSizes.forEach(size => {
+      result.push(run.slice(startIndex, startIndex + size));
+      startIndex += size;
+    });
+    return result;
+  }
+
   // 2. Find Consecutive runs of same color
   colors.forEach(col => {
     let sameCol = normals.filter(t => t.color === col && !usedIds.has(t.id));
@@ -3029,16 +3074,22 @@ function sortSeries() {
           currentRun.push(sameCol[i]);
         } else if (sameCol[i].num !== last.num) {
           if (currentRun.length >= 3) {
-            groups.push(currentRun);
-            currentRun.forEach(t => usedIds.add(t.id));
+            let splitRuns = splitRunIntoSizes(currentRun);
+            splitRuns.forEach(subRun => {
+              groups.push(subRun);
+              subRun.forEach(t => usedIds.add(t.id));
+            });
           }
           currentRun = [sameCol[i]];
         }
       }
     }
     if (currentRun.length >= 3) {
-      groups.push(currentRun);
-      currentRun.forEach(t => usedIds.add(t.id));
+      let splitRuns = splitRunIntoSizes(currentRun);
+      splitRuns.forEach(subRun => {
+        groups.push(subRun);
+        subRun.forEach(t => usedIds.add(t.id));
+      });
     }
   });
 
