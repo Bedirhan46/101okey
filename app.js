@@ -2935,19 +2935,35 @@ function runBotTurn() {
       }
     }
 
-    // Bot discards a random tile — never Okey if possible
-    // Prefer non-Okey tiles
-    let nonOkeyIndices = hand.map((t, i) => i).filter(i => !isWildcard(hand[i]));
+    // Bot discards a tile, prioritizing safe tiles, then işlek, then wildcard (Okey)
+    let safeIndices = hand.map((t, i) => i).filter(i => !isWildcard(hand[i]) && !tileCanLayOff(hand[i], currentTurn));
+    let islekIndices = hand.map((t, i) => i).filter(i => !isWildcard(hand[i]) && tileCanLayOff(hand[i], currentTurn));
+    let wildcardIndices = hand.map((t, i) => i).filter(i => isWildcard(hand[i]));
+
     let discardIndex;
-    if (nonOkeyIndices.length > 0) {
-      discardIndex = nonOkeyIndices[Math.floor(Math.random() * nonOkeyIndices.length)];
+    if (safeIndices.length > 0) {
+      discardIndex = safeIndices[Math.floor(Math.random() * safeIndices.length)];
+    } else if (islekIndices.length > 0) {
+      discardIndex = islekIndices[Math.floor(Math.random() * islekIndices.length)];
     } else {
-      discardIndex = Math.floor(Math.random() * hand.length); // forced to discard Okey
+      discardIndex = wildcardIndices[Math.floor(Math.random() * wildcardIndices.length)];
     }
     let discardTile = hand.length > 0 ? hand.splice(discardIndex, 1)[0] : tile;
 
     discardPiles[currentTurn].push(discardTile);
     renderDiscard();
+
+    let isFinishingBot = (hand.length === 0 && botOpened[currentTurn - 1]);
+    let penalties = [];
+    if (!isFinishingBot) {
+      if (isWildcard(discardTile)) {
+        roundPenalties[currentTurn] += 100;
+        penalties.push('Okey attı (+100)');
+      } else if (openedGroups.length > 0 && tileCanLayOff(discardTile, currentTurn)) {
+        roundPenalties[currentTurn] += 100;
+        penalties.push('İşlek kaçırdı (+100)');
+      }
+    }
 
     let discardTileName = isWildcard(discardTile) ? 'Okey' : (discardTile.fake ? 'Sahte Okey' : discardTile.color.toUpperCase() + ' ' + discardTile.num);
     let discardMsg = `${name} yere taş attı: ${discardTileName}`;
@@ -2955,6 +2971,10 @@ function runBotTurn() {
       discardMsg = `${name} elini açtı ve yere taş attı: ${discardTileName}`;
     } else if (tookDiscardThisTurnBot && botOpened[currentTurn - 1] && !botOpenedThisTurn) {
       discardMsg = `${name} yandan taş aldı, işledi ve yere taş attı: ${discardTileName}`;
+    }
+
+    if (penalties.length > 0) {
+      discardMsg = `⚠️ ${name} ${penalties.join(' | ')} Toplam: ${totalScores[currentTurn] + roundPenalties[currentTurn]}`;
     }
     showMessage(discardMsg);
 
@@ -3254,16 +3274,27 @@ function getCalculatedDeckCount() {
  * Returns true if the given tile can be legally laid off on any existing opened group.
  * Does NOT modify any state — pure check only.
  */
-function tileCanLayOff(tile) {
+function tileCanLayOff(tile, seatIndex = mySeatIndex) {
   if (!tile || !openedGroups || openedGroups.length === 0) return false;
+  
+  let openingType = null;
+  if (seatIndex === mySeatIndex) {
+    openingType = player.openingType;
+  } else {
+    let relIdx = (seatIndex - mySeatIndex + 4) % 4 - 1;
+    openingType = botOpeningType[relIdx];
+  }
+
+  let anyPairsOpened = (player.openingType === 'pairs') || botOpeningType.includes('pairs');
+
   for (let g = 0; g < openedGroups.length; g++) {
     const group = openedGroups[g];
     // Check if player is allowed to lay off on this group based on opening type:
-    if (player.openingType === 'pairs') {
+    if (openingType === 'pairs') {
       if (group.type !== 'pair') continue; // pairs players cannot lay off on series
-    } else if (player.openingType === 'series') {
+    } else if (openingType === 'series') {
       if (group.type === 'pair') {
-        if (!botOpeningType.includes('pairs')) continue; // series players cannot lay off on pairs unless a bot has opened pairs
+        if (!anyPairsOpened) continue; // series players cannot lay off on pairs unless someone has opened pairs
       }
     }
     const tiles = group.tiles;

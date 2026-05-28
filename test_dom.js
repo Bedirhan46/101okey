@@ -146,6 +146,11 @@ try {
     global.triggerNextRound = () => nextRound();
     global.doubleClickGroupMove = (idx) => doubleClickGroupMove(idx);
     global.sortSeries = () => sortSeries();
+    global.triggerRunBotTurn = () => runBotTurn();
+    global.triggerTileCanLayOff = (tile, seatIndex) => tileCanLayOff(tile, seatIndex);
+    global.setOpenedGroups = (val) => { openedGroups = val; };
+    global.setBotHands = (val) => { botHands = val; };
+    global.setDiscardPiles = (val) => { discardPiles = val; };
   `;
   
   eval(code);
@@ -1190,6 +1195,124 @@ try {
         group1Valid, group2Valid, group3Valid, group4Valid,
         rack: sortedRack19.slice(0, 20)
       });
+    }
+
+    // --- Test Case 20: Bot Discard Priority and Penalty Logic ---
+    console.log('\n--- Test Case 20: Bot Discard Priority and Penalty Logic ---');
+    global.enableShowMessageConsole();
+    
+    // 20a: Bot discard priority.
+    // Bot has hand with: Safe tile (Blue 10), İşlek tile (Red 5), Wildcard tile (Okey / joker)
+    // Table has opened group: Red 6-7-8, so Red 5 is playable (işlek).
+    // Ensure bot discards the Safe tile.
+    global.setTotalScores([0, 0, 0, 0]);
+    global.setRoundPenalties([0, 0, 0, 0]);
+    global.setCurrentTurn(1); // Bot 1 (AHMET)
+    global.setBotOpened(0, false); // AHMET has not opened
+    global.setBotOpened(1, false);
+    global.setBotOpened(2, false);
+    global.setDiscardPiles([[], [], [], []]);
+    
+    let botHand1 = [
+      { id: 501, num: 10, color: 'blue', isOkey: false }, // Safe
+      { id: 502, num: 5, color: 'red', isOkey: false },  // İşlek
+      { id: 503, num: 0, color: 'joker', isOkey: true }  // Wildcard
+    ];
+    global.setBotHands([
+      botHand1,
+      [],
+      []
+    ]);
+    
+    // Set deck with a safe tile so when bot draws, hand remains safe
+    global.setDeck([
+      { id: 600, num: 12, color: 'yellow', isOkey: false } // Safe
+    ]);
+    
+    // Table groups
+    global.setOpenedGroups([
+      {
+        player: 0,
+        type: 'run',
+        tiles: [
+          { id: 300, num: 6, color: 'red' },
+          { id: 301, num: 7, color: 'red' },
+          { id: 302, num: 8, color: 'red' }
+        ]
+      }
+    ]);
+    
+    // Run bot turn
+    global.triggerRunBotTurn();
+    
+    // We expect the bot's hand to have discarded Blue 10 or Yellow 12 (since both are safe).
+    // Let's verify that Red 5 and Okey are STILL in AHMET's hand, meaning they were NOT discarded.
+    let remainingHand = global.dumpState().botHands[0];
+    let hasRed5 = remainingHand.some(t => t.id === 502);
+    let hasOkey = remainingHand.some(t => t.id === 503);
+    let penaltyScore = global.getRoundPenalties()[1];
+    
+    if (hasRed5 && hasOkey && penaltyScore === 0) {
+      console.log('PASS: Bot successfully prioritized safe discards over işlek and Okey tiles!');
+    } else {
+      console.error('FAIL: Bot failed to prioritize safe discards!', { remainingHand, penaltyScore });
+    }
+    
+    // 20b: Bot forced to discard işlek.
+    // Hand has only: İşlek tile (Red 5), Wildcard tile (Okey / joker)
+    // Deck has an işlek tile (Red 9) which is also işlek (fits Red 6-7-8).
+    // So the bot must discard an işlek tile.
+    global.setRoundPenalties([0, 0, 0, 0]);
+    global.setCurrentTurn(1);
+    global.setDiscardPiles([[], [], [], []]);
+    
+    let botHand2 = [
+      { id: 502, num: 5, color: 'red', isOkey: false },  // İşlek
+      { id: 503, num: 0, color: 'joker', isOkey: true }  // Wildcard
+    ];
+    global.setBotHands([
+      botHand2,
+      [],
+      []
+    ]);
+    global.setDeck([
+      { id: 601, num: 9, color: 'red', isOkey: false } // İşlek
+    ]);
+    
+    global.triggerRunBotTurn();
+    
+    let penaltyScoreAfterIslek = global.getRoundPenalties()[1];
+    if (penaltyScoreAfterIslek === 100) {
+      console.log('PASS: Bot correctly received +100 penalty for discarding a playable (işlek) tile!');
+    } else {
+      console.error('FAIL: Bot did not receive penalty for discarding işlek tile, score:', penaltyScoreAfterIslek);
+    }
+    
+    // 20c: Bot forced to discard wildcard (Okey).
+    // Hand has only wildcard (Okey)
+    global.setRoundPenalties([0, 0, 0, 0]);
+    global.setCurrentTurn(1);
+    global.setDiscardPiles([[], [], [], []]);
+    
+    let botHand3 = [
+      { id: 503, num: 0, color: 'joker', isOkey: true }  // Wildcard
+    ];
+    global.setBotHands([
+      botHand3,
+      [],
+      []
+    ]);
+    global.setDeck([
+      { id: 602, num: 0, color: 'joker', isOkey: true } // Wildcard
+    ]);
+    
+    global.triggerRunBotTurn();
+    
+    let penaltyScoreAfterOkey = global.getRoundPenalties()[1];
+    if (penaltyScoreAfterOkey === 100) {
+      console.log('PASS: Bot correctly received +100 penalty for discarding a wildcard (Okey) tile!');
+    } else {
+      console.error('FAIL: Bot did not receive penalty for discarding wildcard Okey, score:', penaltyScoreAfterOkey);
     }
   }
 } catch (e) {
