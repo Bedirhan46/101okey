@@ -1993,6 +1993,101 @@ function botTryOpen(botIndex) {
 }
 
 /**
+ * Automatically lays off all valid (işlek) tiles from a bot's hand to the table
+ */
+function botLayOffAll(botIndex) {
+  let hand = botHands[botIndex - 1];
+  if (!hand || hand.length === 0) return false;
+
+  let laidOffAny = false;
+  let maxPasses = 40;
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let laidOffThisPass = false;
+    for (let slotIdx = 0; slotIdx < hand.length; slotIdx++) {
+      let tile = hand[slotIdx];
+      if (!tile) continue;
+
+      for (let groupIdx = 0; groupIdx < openedGroups.length; groupIdx++) {
+        let group = openedGroups[groupIdx];
+
+        // Series vs Pairs layoff rule checking
+        let botOpenType = botOpeningType[botIndex - 1];
+        if (botOpenType === 'pairs') {
+          if (group.type !== 'pair') continue;
+        } else if (botOpenType === 'series') {
+          if (group.type === 'pair') {
+            let anyPairsOpened = (player.openingType === 'pairs') || botOpeningType.some(type => type === 'pairs');
+            if (!anyPairsOpened) continue;
+          }
+        }
+
+        let tiles = group.tiles;
+
+        // Try Wildcard replacement first (steals the wildcard back to bot hand)
+        let replacedIdx = -1;
+        let wildcardToSteal = null;
+        for (let idx = 0; idx < tiles.length; idx++) {
+          let t = tiles[idx];
+          if (isWildcard(t)) {
+            let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+            let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+            let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+            if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
+              replacedIdx = idx;
+              wildcardToSteal = t;
+              break;
+            }
+          }
+        }
+
+        if (replacedIdx !== -1 && wildcardToSteal !== null) {
+          group.tiles[replacedIdx] = { ...tile, laidOff: true };
+          hand[slotIdx] = { ...wildcardToSteal, laidOff: false, facedown: false };
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+
+        // Try prepend
+        let prependTiles = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, idx) => ({ ...t, slotIndex: idx + 1 }))];
+        let prependValid = validateConsecutiveRun(prependTiles).valid || validateSameNumberSet(prependTiles).valid;
+        if (prependValid) {
+          group.tiles.unshift({ ...tile, laidOff: true });
+          hand.splice(slotIdx, 1);
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+
+        // Try append
+        let appendTiles = [...tiles.map((t, idx) => ({ ...t, slotIndex: idx })), { ...tile, slotIndex: tiles.length }];
+        let appendValid = validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid;
+        if (appendValid) {
+          group.tiles.push({ ...tile, laidOff: true });
+          hand.splice(slotIdx, 1);
+          laidOffThisPass = true;
+          laidOffAny = true;
+          break;
+        }
+      }
+      if (laidOffThisPass) break;
+    }
+    if (!laidOffThisPass) {
+      break;
+    }
+  }
+
+  if (laidOffAny) {
+    let botNames = ["SEN", "AHMET", "MEHMET", "AYŞE"];
+    let name = botNames[botIndex];
+    showMessage(`${name} elindeki işlek taşları yere işledi.`);
+  }
+
+  return laidOffAny;
+}
+
+/**
  * Finishes the current round
  */
 /**
@@ -2414,6 +2509,14 @@ function runBotTurn() {
     if (!badgeText.startsWith("Açık")) {
       botOpenedThisTurn = botTryOpen(currentTurn);
       if (botOpenedThisTurn) {
+        renderOpenedGroups();
+      }
+    }
+
+    // If bot has opened, automatically lay off all valid (işlek) tiles from hand
+    if (botOpened[currentTurn - 1]) {
+      let laidOff = botLayOffAll(currentTurn);
+      if (laidOff) {
         renderOpenedGroups();
       }
     }
