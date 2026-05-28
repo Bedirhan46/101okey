@@ -2088,6 +2088,99 @@ function botLayOffAll(botIndex) {
 }
 
 /**
+ * Checks if the bot can use a discard tile (either to open its hand or to lay it off on the table)
+ */
+function canBotUseDiscard(botIndex, tile) {
+  if (!tile) return null;
+  let hand = botHands[botIndex - 1];
+  let opened = botOpened[botIndex - 1];
+  
+  if (opened) {
+    // If already opened, can we lay off the discard tile immediately?
+    let botOpenType = botOpeningType[botIndex - 1];
+    
+    for (let groupIdx = 0; groupIdx < openedGroups.length; groupIdx++) {
+      let group = openedGroups[groupIdx];
+      
+      // Series vs Pairs layoff rule checking
+      if (botOpenType === 'pairs') {
+        if (group.type !== 'pair') continue;
+      } else if (botOpenType === 'series') {
+        if (group.type === 'pair') {
+          let anyPairsOpened = (player.openingType === 'pairs') || botOpeningType.some(type => type === 'pairs');
+          if (!anyPairsOpened) continue;
+        }
+      }
+
+      let tiles = group.tiles;
+
+      // Try Wildcard replacement
+      for (let idx = 0; idx < tiles.length; idx++) {
+        let t = tiles[idx];
+        if (isWildcard(t)) {
+          let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+          let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+          let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+          if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
+            return { action: 'steal', groupIdx: groupIdx, replacedIdx: idx, wildcard: t };
+          }
+        }
+      }
+
+      // Try prepend
+      let prependTiles = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, idx) => ({ ...t, slotIndex: idx + 1 }))];
+      let prependValid = validateConsecutiveRun(prependTiles).valid || validateSameNumberSet(prependTiles).valid;
+      if (prependValid) {
+        return { action: 'prepend', groupIdx: groupIdx };
+      }
+
+      // Try append
+      let appendTiles = [...tiles.map((t, idx) => ({ ...t, slotIndex: idx })), { ...tile, slotIndex: tiles.length }];
+      let appendValid = validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid;
+      if (appendValid) {
+        return { action: 'append', groupIdx: groupIdx };
+      }
+    }
+  } else {
+    // If not opened, can we use the discard tile to open?
+    // We temporarily add the tile to the bot's hand and try to open
+    let tempHand = [...hand, tile];
+    
+    // Try series/sets
+    let seriesResult = findBestMeldsForBot(tempHand);
+    if (seriesResult.score >= 101) {
+      let isUsed = false;
+      for (let meld of seriesResult.melds) {
+        if (meld.tiles.some(t => t.id === tile.id)) {
+          isUsed = true;
+          break;
+        }
+      }
+      if (isUsed) {
+        return { action: 'open_series', result: seriesResult };
+      }
+    }
+    
+    // Try pairs
+    let pairs = findBestPairsForBot(tempHand);
+    if (pairs.length >= 5) {
+      let isUsed = false;
+      for (let pair of pairs) {
+        if (pair.some(t => t.id === tile.id)) {
+          isUsed = true;
+          break;
+        }
+      }
+      if (isUsed) {
+        return { action: 'open_pairs', result: pairs };
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Finishes the current round
  */
 /**
@@ -2489,21 +2582,95 @@ function runBotTurn() {
   const botNames = playersInfo.map(p => p.name);
   let name = botNames[currentTurn];
 
-  if (deck.length === 0) {
-    showMessage("Yerde çekilecek taş kalmadı! El bitti.");
-    setTimeout(() => endRound(-1, 'normal'), 600);
-    return;
-  }
+  let prevSeat = (currentTurn + 3) % 4;
+  let lastDiscard = discardPiles[prevSeat].length > 0 ? discardPiles[prevSeat][discardPiles[prevSeat].length - 1] : null;
+  let decision = canBotUseDiscard(currentTurn, lastDiscard);
 
-  // Draw tile
-  let tile = deck.pop();
-  botHands[currentTurn - 1].push(tile);
-  showMessage(`${name} yerden taş çekiyor...`);
-  document.getElementById("deck-tile-count").textContent = getCalculatedDeckCount();
+  let tile = null;
+  let hand = botHands[currentTurn - 1];
+  let tookDiscardThisTurnBot = false;
+
+  if (decision) {
+    // Take discard tile
+    let takenTile = discardPiles[prevSeat].pop();
+    renderDiscard();
+    tookDiscardThisTurnBot = true;
+
+    let tileName = isWildcard(takenTile) ? 'Sahte Okey' : (takenTile.fake ? 'Sahte Okey' : takenTile.color.toUpperCase() + ' ' + takenTile.num);
+    if (takenTile.fake) tileName = 'Sahte Okey';
+    showMessage(`${name} yandan atılan ${tileName} taşını aldı!`);
+
+    if (decision.action === 'steal') {
+      let group = openedGroups[decision.groupIdx];
+      let wildcard = decision.wildcard;
+      group.tiles[decision.replacedIdx] = { ...takenTile, laidOff: true };
+      hand.push({ ...wildcard, laidOff: false, facedown: false });
+      renderOpenedGroups();
+    } else if (decision.action === 'prepend') {
+      let group = openedGroups[decision.groupIdx];
+      group.tiles.unshift({ ...takenTile, laidOff: true });
+      renderOpenedGroups();
+    } else if (decision.action === 'append') {
+      let group = openedGroups[decision.groupIdx];
+      group.tiles.push({ ...takenTile, laidOff: true });
+      renderOpenedGroups();
+    } else if (decision.action === 'open_series') {
+      hand.push(takenTile);
+      let seriesResult = decision.result;
+      seriesResult.melds.forEach(meld => {
+        openedGroups.push({
+          player: currentTurn,
+          type: meld.type,
+          tiles: meld.tiles.map(t => ({ ...t }))
+        });
+        meld.tiles.forEach(t => {
+          let idx = hand.findIndex(h => h.id === t.id);
+          if (idx !== -1) hand.splice(idx, 1);
+        });
+      });
+      document.getElementById(`p${currentTurn}-score-badge`).textContent = `Açık (${seriesResult.score} P)`;
+      showMessage(`${name} elini açtı! Yere serilerini indirdi.`);
+      botOpened[currentTurn - 1] = true;
+      botOpeningType[currentTurn - 1] = 'series';
+      botOpenedThisTurn[currentTurn - 1] = true;
+      renderOpenedGroups();
+    } else if (decision.action === 'open_pairs') {
+      hand.push(takenTile);
+      let pairs = decision.result;
+      pairs.forEach(pair => {
+        openedGroups.push({
+          player: currentTurn,
+          type: 'pair',
+          tiles: pair.map(t => ({ ...t }))
+        });
+        pair.forEach(t => {
+          let idx = hand.findIndex(h => h.id === t.id);
+          if (idx !== -1) hand.splice(idx, 1);
+        });
+      });
+      document.getElementById(`p${currentTurn}-score-badge`).textContent = `Açık (${pairs.length} Çift)`;
+      showMessage(`${name} elini açtı! Yere çiftlerini indirdi.`);
+      botOpened[currentTurn - 1] = true;
+      botOpeningType[currentTurn - 1] = 'pairs';
+      botOpenedThisTurn[currentTurn - 1] = true;
+      renderOpenedGroups();
+    }
+  } else {
+    // Draw tile from deck
+    if (deck.length === 0) {
+      showMessage("Yerde çekilecek taş kalmadı! El bitti.");
+      setTimeout(() => endRound(-1, 'normal'), 600);
+      return;
+    }
+    tile = deck.pop();
+    hand.push(tile);
+    showMessage(`${name} yerden taş çekiyor...`);
+    document.getElementById("deck-tile-count").textContent = getCalculatedDeckCount();
+  }
 
   // Discard tile after delay
   setTimeout(() => {
-    // Check if bot wants to open hand
+    // Check if bot wants to open hand (if it hasn't opened yet)
     let botOpenedThisTurn = false;
     let badgeText = document.getElementById(`p${currentTurn}-score-badge`).textContent;
     if (!badgeText.startsWith("Açık")) {
@@ -2522,7 +2689,6 @@ function runBotTurn() {
     }
 
     // Bot discards a random tile — never Okey if possible
-    let hand = botHands[currentTurn - 1];
     // Prefer non-Okey tiles
     let nonOkeyIndices = hand.map((t, i) => i).filter(i => !isWildcard(hand[i]));
     let discardIndex;
@@ -2540,11 +2706,13 @@ function runBotTurn() {
     let discardMsg = `${name} yere taş attı: ${discardTileName}`;
     if (botOpenedThisTurn) {
       discardMsg = `${name} elini açtı ve yere taş attı: ${discardTileName}`;
+    } else if (tookDiscardThisTurnBot && botOpened[currentTurn - 1] && !botOpenedThisTurn) {
+      discardMsg = `${name} yandan taş aldı, işledi ve yere taş attı: ${discardTileName}`;
     }
     showMessage(discardMsg);
 
     // Check if bot's hand is now empty → auto-finish
-    if (botHands[currentTurn - 1].length === 0 && botOpened[currentTurn - 1]) {
+    if (hand.length === 0 && botOpened[currentTurn - 1]) {
       const botWinnerId = currentTurn;
       setTimeout(() => endRound(botWinnerId, 'normal'), 600);
       return;
