@@ -659,6 +659,7 @@ function renderHand() {
 
   rackSlots.forEach((tile, index) => {
     const slotDiv = document.createElement("div");
+    slotDiv.setAttribute('data-slot-index', String(index));
 
     // ── Shared drop handler for ALL slots (empty or filled) ──
     slotDiv.ondragover = (e) => {
@@ -671,10 +672,22 @@ function renderHand() {
     slotDiv.ondrop = (e) => {
       e.preventDefault();
       slotDiv.classList.remove("drag-hover-slot");
-      const srcIdxStr = e.dataTransfer.getData("text/plain");
-      if (srcIdxStr === "" || srcIdxStr === undefined) return;
-      const srcIdx = parseInt(srcIdxStr, 10);
+      const srcData = e.dataTransfer.getData("text/plain");
+      if (srcData === "" || srcData === undefined) return;
+
+      if (srcData.startsWith("group:")) {
+        moveGroupTo(index);
+        return;
+      }
+
+      const srcIdx = parseInt(srcData, 10);
       if (isNaN(srcIdx) || srcIdx === index) return;
+
+      // If the tile is part of selectedGroupIndices, treat as group drag
+      if (selectedGroupIndices.includes(srcIdx)) {
+        moveGroupTo(index);
+        return;
+      }
 
       // Swap (works for both empty→tile and tile→tile)
       let temp = rackSlots[index];
@@ -729,16 +742,30 @@ function renderHand() {
       slotDiv.setAttribute("draggable", "true");
       slotDiv.ondragstart = (e) => {
         draggedTileIndex = index;
-        e.dataTransfer.setData("text/plain", String(index));
+        let isGroupDrag = selectedGroupIndices.includes(index);
+        if (isGroupDrag) {
+          e.dataTransfer.setData("text/plain", "group:" + index);
+        } else {
+          e.dataTransfer.setData("text/plain", String(index));
+        }
         e.dataTransfer.effectAllowed = "move";
         // Small delay so the ghost image renders before style changes
         setTimeout(() => {
-          slotDiv.classList.add("dragging");
+          if (isGroupDrag) {
+            selectedGroupIndices.forEach(idx => {
+              const sDiv = rack.children[idx];
+              if (sDiv) sDiv.classList.add("dragging");
+            });
+          } else {
+            slotDiv.classList.add("dragging");
+          }
           renderOpenedGroups();
         }, 0);
       };
       slotDiv.ondragend = () => {
-        slotDiv.classList.remove("dragging");
+        Array.from(rack.children).forEach(sDiv => {
+          sDiv.classList.remove("dragging");
+        });
         draggedTileIndex = null;
         renderOpenedGroups();
       };
@@ -770,14 +797,10 @@ function renderHand() {
 
       slotDiv.ondblclick = (e) => {
         e.stopPropagation();
-
-        let moved = doubleClickGroupMove(index);
-        if (!moved) {
-          if (isWildcard(tile)) {
-            toggleTileFacedown(index);
-          } else {
-            selectGroup(index);
-          }
+        if (isWildcard(tile)) {
+          toggleTileFacedown(index);
+        } else {
+          selectGroup(index);
         }
       };
     }
@@ -3911,6 +3934,31 @@ function initSpecialDrags() {
       discardTile();
     }
   });
+
+  // ── 5. Table Felt = drop target for group tiles (yere açma) ──
+  const tableFelt = document.querySelector('.table-felt');
+  safeAddEvent(tableFelt, 'dragover', (e) => {
+    e.preventDefault();
+  });
+  safeAddEvent(tableFelt, 'drop', (e) => {
+    e.preventDefault();
+    const val = e.dataTransfer.getData('text/plain');
+    if (val && val.startsWith('group:')) {
+      if (currentTurn !== mySeatIndex) {
+        showMessage("Sıra sizde değil!");
+        return;
+      }
+      if (!hasDrawn) {
+        showMessage("Önce yerden veya yandan taş çekmelisiniz!");
+        return;
+      }
+      if (player.opened) {
+        layDownGroup();
+      } else {
+        showMessage("Elinizi açmak için önce 'SERİ AÇ' veya 'ÇİFT AÇ' butonunu kullanmalısınız.");
+      }
+    }
+  });
 }
 
 /**
@@ -4027,7 +4075,16 @@ function initTouchDrag() {
         touchSrcType  = 'rack';
         touchSrcIndex = idx;
         createGhost(slotEl, touch.clientX, touch.clientY);
-        slotEl.classList.add('dragging');
+        
+        let isGroupDrag = selectedGroupIndices.includes(idx);
+        if (isGroupDrag) {
+          selectedGroupIndices.forEach(gi => {
+            const sDiv = document.querySelector(`[data-slot-index="${gi}"]`);
+            if (sDiv) sDiv.classList.add('dragging');
+          });
+        } else {
+          slotEl.classList.add('dragging');
+        }
       }
     }
   }, { passive: true });
@@ -4061,10 +4118,7 @@ function initTouchDrag() {
     removeGhost();
 
     // Clean up dragging class
-    if (srcIdx !== null) {
-      const srcEl = document.querySelector(`[data-slot-index="${srcIdx}"]`);
-      if (srcEl) srcEl.classList.remove('dragging');
-    }
+    Array.from(document.querySelectorAll('.dragging')).forEach(el => el.classList.remove('dragging'));
 
     // Clean up hover classes
     const dzp0 = document.getElementById('discard-zone-p0');
@@ -4110,6 +4164,25 @@ function initTouchDrag() {
         return;
       }
 
+      // Drop on table felt → lay down selected group
+      const isTable = dropEl.closest('.table-felt');
+      if (isTable && selectedGroupIndices.includes(srcIdx)) {
+        if (currentTurn !== mySeatIndex) {
+          showMessage("Sıra sizde değil!");
+          return;
+        }
+        if (!hasDrawn) {
+          showMessage("Önce yerden veya yandan taş çekmelisiniz!");
+          return;
+        }
+        if (player.opened) {
+          layDownGroup();
+        } else {
+          showMessage("Elinizi açmak için önce 'SERİ AÇ' veya 'ÇİFT AÇ' butonunu kullanmalısınız.");
+        }
+        return;
+      }
+
       // Drop on an opened group → layoff
       const groupIdxStr = getAttr(dropEl, 'data-group-index');
       if (groupIdxStr !== null) {
@@ -4122,6 +4195,10 @@ function initTouchDrag() {
       if (destIdxStr !== null) {
         const destIdx = parseInt(destIdxStr, 10);
         if (destIdx !== srcIdx) {
+          if (selectedGroupIndices.includes(srcIdx)) {
+            moveGroupTo(destIdx);
+            return;
+          }
           let temp = rackSlots[destIdx];
           rackSlots[destIdx] = rackSlots[srcIdx];
           rackSlots[srcIdx]  = temp;
