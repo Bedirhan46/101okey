@@ -174,8 +174,8 @@ function clusterShuffle(tiles) {
     return null;
   }
 
-  // Target cohesion rate (65% chance that a formed consecutive run or same-number set stays intact)
-  const COHESION_RATE = 0.65;
+  // Target cohesion rate (45% chance that a formed consecutive run or same-number set stays intact)
+  const COHESION_RATE = 0.45;
 
   while (pool.length > 0) {
     if (Math.random() < 0.5 && pool.length >= 3) {
