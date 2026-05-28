@@ -122,8 +122,8 @@ function createDeck() {
   deck.push({ id: uniqueId++, num: "OKEY", color: "joker", fake: true, isOkey: false });
   deck.push({ id: uniqueId++, num: "OKEY", color: "joker", fake: true, isOkey: false });
 
-  // Shuffle
-  deck.sort(() => Math.random() - 0.5);
+  // Shuffle with smart cluster shuffling to increase run/set density in dealt hands
+  deck = clusterShuffle(deck);
 
   // Select indicator tile (must be a number tile)
   let indicatorIndex = deck.findIndex(t => !t.fake);
@@ -150,6 +150,125 @@ function createDeck() {
 
   // Remove the indicator tile from the deck so it is face up on the board
   deck.splice(indicatorIndex, 1);
+}
+
+/**
+ * Custom cluster shuffle to simulate physical-like clumpy shuffling.
+ * Groups consecutives and sets of same number together with a cohesion probability,
+ * leading to much higher set/run densities on dealt hands.
+ */
+function clusterShuffle(tiles) {
+  let pool = [...tiles];
+  let groups = [];
+  let singles = [];
+
+  // Helper to find and extract a tile matching criteria
+  function extractTile(color, num, isFake = false) {
+    let idx = pool.findIndex(t => {
+      if (isFake) return t.fake;
+      return t.color === color && t.num === num && !t.fake;
+    });
+    if (idx !== -1) {
+      return pool.splice(idx, 1)[0];
+    }
+    return null;
+  }
+
+  // Target cohesion rate (65% chance that a formed consecutive run or same-number set stays intact)
+  const COHESION_RATE = 0.65;
+
+  while (pool.length > 0) {
+    if (Math.random() < 0.5 && pool.length >= 3) {
+      // Try to form a consecutive run (series)
+      let seed = pool[Math.floor(Math.random() * pool.length)];
+      if (seed.fake) {
+        singles.push(pool.splice(pool.indexOf(seed), 1)[0]);
+        continue;
+      }
+      
+      let runLength = Math.random() < 0.3 ? 4 : 3;
+      let seedNum = seed.num;
+      let seedColor = seed.color;
+
+      let offset = Math.floor(Math.random() * runLength);
+      let startNum = seedNum - offset;
+      if (startNum < 1) startNum = 1;
+      if (startNum + runLength - 1 > 13) startNum = 14 - runLength;
+
+      let group = [];
+      for (let n = startNum; n < startNum + runLength; n++) {
+        let t = extractTile(seedColor, n);
+        if (t) group.push(t);
+      }
+
+      if (group.length >= 3) {
+        if (Math.random() < COHESION_RATE) {
+          groups.push(group);
+        } else {
+          singles.push(...group);
+        }
+      } else {
+        singles.push(...group);
+      }
+    } else if (pool.length >= 3) {
+      // Try to form a same-number set (different colors)
+      let seed = pool[Math.floor(Math.random() * pool.length)];
+      if (seed.fake) {
+        singles.push(pool.splice(pool.indexOf(seed), 1)[0]);
+        continue;
+      }
+
+      let num = seed.num;
+      let setSize = Math.random() < 0.3 ? 4 : 3;
+      
+      let availableColors = [...colors];
+      availableColors.sort(() => Math.random() - 0.5);
+
+      let group = [];
+      for (let i = 0; i < setSize; i++) {
+        let col = availableColors[i];
+        let t = extractTile(col, num);
+        if (t) group.push(t);
+      }
+
+      if (group.length >= 3) {
+        if (Math.random() < COHESION_RATE) {
+          groups.push(group);
+        } else {
+          singles.push(...group);
+        }
+      } else {
+        singles.push(...group);
+      }
+    } else {
+      let randIdx = Math.floor(Math.random() * pool.length);
+      singles.push(pool.splice(randIdx, 1)[0]);
+    }
+  }
+
+  // Shuffle the groups and singles separately
+  groups.sort(() => Math.random() - 0.5);
+  singles.sort(() => Math.random() - 0.5);
+
+  // Re-assemble the deck by interspersing groups and singles
+  let finalDeck = [];
+  let gIdx = 0;
+  let sIdx = 0;
+
+  while (gIdx < groups.length || sIdx < singles.length) {
+    if (gIdx < groups.length && (sIdx >= singles.length || Math.random() < 0.6)) {
+      finalDeck.push(...groups[gIdx]);
+      gIdx++;
+    } else {
+      let numSingles = Math.min(singles.length - sIdx, Math.floor(Math.random() * 3) + 1);
+      for (let i = 0; i < numSingles; i++) {
+        finalDeck.push(singles[sIdx]);
+        sIdx++;
+      }
+    }
+  }
+
+  return finalDeck;
 }
 
 /**
