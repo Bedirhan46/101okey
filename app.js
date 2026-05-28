@@ -2997,20 +2997,24 @@ function sortSeries() {
 
   // 1. Find Same-Number different-color sets
   for (let n = 1; n <= 13; n++) {
-    let matches = normals.filter(t => t.num === n && !usedIds.has(t.id));
-    // Unique colors
-    let uniqueMatches = [];
-    let seenColors = new Set();
-    matches.forEach(t => {
-      if (!seenColors.has(t.color)) {
-        seenColors.add(t.color);
-        uniqueMatches.push(t);
-      }
-    });
+    while (true) {
+      let matches = normals.filter(t => t.num === n && !usedIds.has(t.id));
+      // Unique colors
+      let uniqueMatches = [];
+      let seenColors = new Set();
+      matches.forEach(t => {
+        if (!seenColors.has(t.color)) {
+          seenColors.add(t.color);
+          uniqueMatches.push(t);
+        }
+      });
 
-    if (uniqueMatches.length >= 3) {
-      groups.push(uniqueMatches);
-      uniqueMatches.forEach(t => usedIds.add(t.id));
+      if (uniqueMatches.length >= 3) {
+        groups.push(uniqueMatches);
+        uniqueMatches.forEach(t => usedIds.add(t.id));
+        continue;
+      }
+      break;
     }
   }
 
@@ -3061,35 +3065,43 @@ function sortSeries() {
 
   // 2. Find Consecutive runs of same color
   colors.forEach(col => {
-    let sameCol = normals.filter(t => t.color === col && !usedIds.has(t.id));
-    sameCol.sort((a, b) => a.num - b.num);
+    while (true) {
+      let sameCol = normals.filter(t => t.color === col && !usedIds.has(t.id));
+      sameCol.sort((a, b) => a.num - b.num);
 
-    let currentRun = [];
-    for (let i = 0; i < sameCol.length; i++) {
-      if (currentRun.length === 0) {
-        currentRun.push(sameCol[i]);
-      } else {
-        let last = currentRun[currentRun.length - 1];
-        if (sameCol[i].num === last.num + 1) {
+      let currentRun = [];
+      let foundRun = false;
+
+      for (let i = 0; i < sameCol.length; i++) {
+        if (currentRun.length === 0) {
           currentRun.push(sameCol[i]);
-        } else if (sameCol[i].num !== last.num) {
-          if (currentRun.length >= 3) {
-            let splitRuns = splitRunIntoSizes(currentRun);
-            splitRuns.forEach(subRun => {
-              groups.push(subRun);
-              subRun.forEach(t => usedIds.add(t.id));
-            });
+        } else {
+          let last = currentRun[currentRun.length - 1];
+          if (sameCol[i].num === last.num + 1) {
+            currentRun.push(sameCol[i]);
+          } else if (sameCol[i].num !== last.num) {
+            if (currentRun.length >= 3) {
+              foundRun = true;
+              break;
+            }
+            currentRun = [sameCol[i]];
           }
-          currentRun = [sameCol[i]];
         }
       }
-    }
-    if (currentRun.length >= 3) {
-      let splitRuns = splitRunIntoSizes(currentRun);
-      splitRuns.forEach(subRun => {
-        groups.push(subRun);
-        subRun.forEach(t => usedIds.add(t.id));
-      });
+
+      if (!foundRun && currentRun.length >= 3) {
+        foundRun = true;
+      }
+
+      if (foundRun && currentRun.length >= 3) {
+        let splitRuns = splitRunIntoSizes(currentRun);
+        splitRuns.forEach(subRun => {
+          groups.push(subRun);
+          subRun.forEach(t => usedIds.add(t.id));
+        });
+        continue;
+      }
+      break;
     }
   });
 

@@ -1151,6 +1151,46 @@ try {
         slot4: sortedRack18[4], slot5: sortedRack18[5], slot6: sortedRack18[6]
       });
     }
+
+    // --- Test Case 19: Duplicate Consecutive Run Splitting in Sort Series ---
+    console.log('\n--- Test Case 19: Duplicate Consecutive Run Splitting in Sort Series ---');
+    let testRack19 = Array(40).fill(null);
+    // First copy of Red 1-6
+    testRack19[0] = { id: 201, num: 1, color: 'red' };
+    testRack19[1] = { id: 202, num: 2, color: 'red' };
+    testRack19[2] = { id: 203, num: 3, color: 'red' };
+    testRack19[3] = { id: 204, num: 4, color: 'red' };
+    testRack19[4] = { id: 205, num: 5, color: 'red' };
+    testRack19[5] = { id: 206, num: 6, color: 'red' };
+    // Second copy of Red 1-6
+    testRack19[6] = { id: 211, num: 1, color: 'red' };
+    testRack19[7] = { id: 212, num: 2, color: 'red' };
+    testRack19[8] = { id: 213, num: 3, color: 'red' };
+    testRack19[9] = { id: 214, num: 4, color: 'red' };
+    testRack19[10] = { id: 215, num: 5, color: 'red' };
+    testRack19[11] = { id: 216, num: 6, color: 'red' };
+
+    for (let i = 0; i < 40; i++) {
+      global.setRackSlot(i, testRack19[i]);
+    }
+
+    global.sortSeries();
+    let sortedRack19 = global.dumpState().rackSlots;
+
+    // We expect 4 groups of 3 tiles, each separated by null
+    let group1Valid = sortedRack19[0] !== null && sortedRack19[1] !== null && sortedRack19[2] !== null && sortedRack19[3] === null;
+    let group2Valid = sortedRack19[4] !== null && sortedRack19[5] !== null && sortedRack19[6] !== null && sortedRack19[7] === null;
+    let group3Valid = sortedRack19[8] !== null && sortedRack19[9] !== null && sortedRack19[10] !== null && sortedRack19[11] === null;
+    let group4Valid = sortedRack19[12] !== null && sortedRack19[13] !== null && sortedRack19[14] !== null && sortedRack19[15] === null;
+
+    if (group1Valid && group2Valid && group3Valid && group4Valid) {
+      console.log('PASS: Duplicate 6-tile consecutive runs successfully split into four separate 3-tile runs!');
+    } else {
+      console.error('FAIL: Duplicate 6-tile consecutive runs split verification failed!', {
+        group1Valid, group2Valid, group3Valid, group4Valid,
+        rack: sortedRack19.slice(0, 20)
+      });
+    }
   }
 } catch (e) {
   console.error('Error during execution:', e);
