@@ -41,6 +41,7 @@ Object.defineProperty(globalThis, 'discardPile', {
 });
 let selectedIndex = null;
 let selectedGroupIndices = []; // Indices of currently selected contiguous group of tiles
+let draggedTileIndex = null;   // Index of the tile currently being dragged
 let currentTurn = -1;           // 0: SEN, 1: AHMET, 2: MEHMET, 3: AYŞE
 let hasDrawn = false;          // Tracks if the active player has drawn a tile
 let roundStartPlayer = 0;       // The player index who starts the current round
@@ -727,13 +728,19 @@ function renderHand() {
       // HTML5 Drag and Drop — source
       slotDiv.setAttribute("draggable", "true");
       slotDiv.ondragstart = (e) => {
+        draggedTileIndex = index;
         e.dataTransfer.setData("text/plain", String(index));
         e.dataTransfer.effectAllowed = "move";
         // Small delay so the ghost image renders before style changes
-        setTimeout(() => slotDiv.classList.add("dragging"), 0);
+        setTimeout(() => {
+          slotDiv.classList.add("dragging");
+          renderOpenedGroups();
+        }, 0);
       };
       slotDiv.ondragend = () => {
         slotDiv.classList.remove("dragging");
+        draggedTileIndex = null;
+        renderOpenedGroups();
       };
 
       slotDiv.onclick = (e) => {
@@ -742,12 +749,15 @@ function renderHand() {
           selectedGroupIndices = [];
           selectedIndex = index;
           renderHand();
+          renderOpenedGroups();
         } else if (selectedIndex === null) {
           selectedIndex = index;
           renderHand();
+          renderOpenedGroups();
         } else if (selectedIndex === index) {
           selectedIndex = null;
           renderHand();
+          renderOpenedGroups();
         } else {
           // Swap the two slots
           let temp = rackSlots[index];
@@ -1672,6 +1682,44 @@ function extractMeldsFromRack(type) {
 /**
  * Renders all opened groups on the table felt.
  */
+/**
+ * Helper to check if a specific tile can be laid off on the left (prepend) or right (append) of a group
+ */
+function getTileLayOffValidity(tile, group) {
+  if (!tile || !group) return { prepend: false, append: false };
+
+  // Enforce series vs pairs layoff rules
+  if (player.openingType === 'pairs') {
+    if (group.type !== 'pair') return { prepend: false, append: false };
+  } else if (player.openingType === 'series') {
+    if (group.type === 'pair') {
+      let anyPairsOpened = (player.openingType === 'pairs') || botOpeningType.includes('pairs');
+      if (!anyPairsOpened) return { prepend: false, append: false };
+    }
+  }
+
+  let tiles = group.tiles;
+
+  // 1. Try prepending
+  let prependTiles = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, idx) => ({ ...t, slotIndex: idx + 1 }))];
+  let prependValid = false;
+  if (validateConsecutiveRun(prependTiles).valid || validateSameNumberSet(prependTiles).valid) {
+    prependValid = true;
+  }
+
+  // 2. Try appending
+  let appendTiles = [...tiles.map((t, idx) => ({ ...t, slotIndex: idx })), { ...tile, slotIndex: tiles.length }];
+  let appendValid = false;
+  if (validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid) {
+    appendValid = true;
+  }
+
+  return { prepend: prependValid, append: appendValid };
+}
+
+/**
+ * Renders all opened groups on the table felt.
+ */
 function renderOpenedGroups() {
   for (let i = 0; i < 4; i++) {
     const zone = document.getElementById("opened-zone-p" + i);
@@ -1717,6 +1765,51 @@ function renderOpenedGroups() {
       groupDiv.classList.add("layoff-target");
     }
 
+    // Determine if prepend/append are valid for current active tile
+    let activeTileIdx = (draggedTileIndex !== null) ? draggedTileIndex : selectedIndex;
+    let activeTile = (activeTileIdx !== null) ? rackSlots[activeTileIdx] : null;
+
+    let prependValid = false;
+    let appendValid = false;
+
+    if (player.opened && currentTurn === mySeatIndex && hasDrawn && activeTile) {
+      let validity = getTileLayOffValidity(activeTile, group);
+      prependValid = validity.prepend;
+      appendValid = validity.append;
+    }
+
+    // Render Left/Prepend indicator if valid
+    if (prependValid) {
+      const leftIndicator = document.createElement("div");
+      leftIndicator.className = "layoff-indicator-left";
+      leftIndicator.textContent = "+";
+      
+      leftIndicator.onclick = (e) => {
+        e.stopPropagation();
+        layOffTile(activeTileIdx, groupIdx, 'left');
+      };
+      
+      leftIndicator.ondragover = (e) => {
+        e.preventDefault();
+        leftIndicator.classList.add("hover");
+      };
+      leftIndicator.ondragleave = () => {
+        leftIndicator.classList.remove("hover");
+      };
+      leftIndicator.ondrop = (e) => {
+        e.preventDefault();
+        leftIndicator.classList.remove("hover");
+        const draggedIdxStr = e.dataTransfer.getData("text/plain");
+        if (draggedIdxStr !== "") {
+          const draggedIdx = parseInt(draggedIdxStr, 10);
+          layOffTile(draggedIdx, groupIdx, 'left');
+        }
+      };
+      
+      groupDiv.appendChild(leftIndicator);
+    }
+
+    // Render Group Tiles
     group.tiles.forEach(tile => {
       const tileDiv = document.createElement("div");
       if (isWildcard(tile)) {
@@ -1746,6 +1839,37 @@ function renderOpenedGroups() {
 
       groupDiv.appendChild(tileDiv);
     });
+
+    // Render Right/Append indicator if valid
+    if (appendValid) {
+      const rightIndicator = document.createElement("div");
+      rightIndicator.className = "layoff-indicator-right";
+      rightIndicator.textContent = "+";
+      
+      rightIndicator.onclick = (e) => {
+        e.stopPropagation();
+        layOffTile(activeTileIdx, groupIdx, 'right');
+      };
+      
+      rightIndicator.ondragover = (e) => {
+        e.preventDefault();
+        rightIndicator.classList.add("hover");
+      };
+      rightIndicator.ondragleave = () => {
+        rightIndicator.classList.remove("hover");
+      };
+      rightIndicator.ondrop = (e) => {
+        e.preventDefault();
+        rightIndicator.classList.remove("hover");
+        const draggedIdxStr = e.dataTransfer.getData("text/plain");
+        if (draggedIdxStr !== "") {
+          const draggedIdx = parseInt(draggedIdxStr, 10);
+          layOffTile(draggedIdx, groupIdx, 'right');
+        }
+      };
+      
+      groupDiv.appendChild(rightIndicator);
+    }
 
     zone.appendChild(groupDiv);
   });
@@ -3068,7 +3192,7 @@ function tileCanLayOff(tile) {
   return false;
 }
 
-function layOffTile(draggedIdx, groupIdx) {
+function layOffTile(draggedIdx, groupIdx, side) {
   if (currentTurn !== mySeatIndex) {
     showMessage("Sıra sizde değil! Taş işleyemezsiniz.");
     return;
@@ -3096,7 +3220,8 @@ function layOffTile(draggedIdx, groupIdx) {
     }
   } else if (player.openingType === 'series') {
     if (group.type === 'pair') {
-      if (!botOpeningType.includes('pairs')) {
+      let anyPairsOpened = (player.openingType === 'pairs') || botOpeningType.includes('pairs');
+      if (!anyPairsOpened) {
         showMessage("Rakiplerden hiçbiri çift açmadığı için çiftlere taş işleyemezsiniz!");
         return;
       }
@@ -3105,57 +3230,78 @@ function layOffTile(draggedIdx, groupIdx) {
 
   let tiles = group.tiles;
 
-  // 1. Try prepending
+  // 1. Try wildcard stealing (replacing wildcard with matching normal tile)
+  // Only check wildcard stealing if no specific side is passed (meaning they dropped on the middle of the group)
+  let replacedIdx = -1;
+  let wildcardToSteal = null;
+  if (!side) {
+    for (let idx = 0; idx < tiles.length; idx++) {
+      let t = tiles[idx];
+      if (isWildcard(t)) {
+        let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
+        let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
+        let isSameNumber = validateSameNumberSet(candidateTiles).valid;
+        if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
+          replacedIdx = idx;
+          wildcardToSteal = t;
+          break;
+        }
+      }
+    }
+
+    if (replacedIdx !== -1 && wildcardToSteal !== null) {
+      // Perform replacement: swap the table wildcard for our normal tile
+      group.tiles[replacedIdx] = { ...tile, laidOff: true };
+      // Put stolen Okey back in player's rack
+      rackSlots[draggedIdx] = { ...wildcardToSteal, laidOff: false, facedown: false };
+      if (selectedIndex === draggedIdx) {
+        selectedIndex = null;
+      }
+      updateAll(`Yerdeki OKEY taşı çalındı, yerine ${tile.color.toUpperCase()} ${tile.num} işlendi.`);
+      uploadGameState();
+      return;
+    }
+  }
+
+  // 2. Try prepending
   let prependTiles = [{ ...tile, slotIndex: 0 }, ...tiles.map((t, idx) => ({ ...t, slotIndex: idx + 1 }))];
   let prependValid = false;
   if (validateConsecutiveRun(prependTiles).valid || validateSameNumberSet(prependTiles).valid) {
     prependValid = true;
   }
 
-  // 2. Try appending
+  // 3. Try appending
   let appendTiles = [...tiles.map((t, idx) => ({ ...t, slotIndex: idx })), { ...tile, slotIndex: tiles.length }];
   let appendValid = false;
   if (validateConsecutiveRun(appendTiles).valid || validateSameNumberSet(appendTiles).valid) {
     appendValid = true;
   }
 
-  // 3. Try wildcard stealing (replacing wildcard with matching normal tile)
-  let replacedIdx = -1;
-  let wildcardToSteal = null;
-  for (let idx = 0; idx < tiles.length; idx++) {
-    let t = tiles[idx];
-    if (isWildcard(t)) {
-      let candidateTiles = tiles.map((item, i) => i === idx ? tile : item);
-      let isConsecutive = validateConsecutiveRun(candidateTiles).valid;
-      let isSameNumber = validateSameNumberSet(candidateTiles).valid;
-      if (isConsecutive || (isSameNumber && candidateTiles.length === 4)) {
-        replacedIdx = idx;
-        wildcardToSteal = t;
-        break;
-      }
+  // Handle specific side or fallback
+  if (side === 'left') {
+    if (prependValid) {
+      group.tiles.unshift({ ...tile, laidOff: true });
+    } else {
+      showMessage("Bu taş bu serinin sol tarafına işlenemez!");
+      return;
     }
-  }
-
-  if (replacedIdx !== -1 && wildcardToSteal !== null) {
-    // Perform replacement: swap the table wildcard for our normal tile
-    group.tiles[replacedIdx] = { ...tile, laidOff: true };
-    // Put stolen Okey back in player's rack
-    rackSlots[draggedIdx] = { ...wildcardToSteal, laidOff: false, facedown: false };
-    if (selectedIndex === draggedIdx) {
-      selectedIndex = null;
+  } else if (side === 'right') {
+    if (appendValid) {
+      group.tiles.push({ ...tile, laidOff: true });
+    } else {
+      showMessage("Bu taş bu serinin sağ tarafına işlenemez!");
+      return;
     }
-    updateAll(`Yerdeki OKEY taşı çalındı, yerine ${tile.color.toUpperCase()} ${tile.num} işlendi.`);
-    uploadGameState();
-    return;
-  }
-
-  if (prependValid) {
-    group.tiles.unshift({ ...tile, laidOff: true });
-  } else if (appendValid) {
-    group.tiles.push({ ...tile, laidOff: true });
   } else {
-    showMessage("Bu taş bu seriye işlenemez!");
-    return;
+    // Default fallback priority
+    if (prependValid) {
+      group.tiles.unshift({ ...tile, laidOff: true });
+    } else if (appendValid) {
+      group.tiles.push({ ...tile, laidOff: true });
+    } else {
+      showMessage("Bu taş bu seriye işlenemez!");
+      return;
+    }
   }
 
   // Remove tile from rack

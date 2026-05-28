@@ -1484,3 +1484,32 @@ body {
   0% { opacity: 0.6; }
   100% { opacity: 1.0; }
 }
+
+/* Layoff Side Indicators (Sarı İşleme Alanları) */
+.layoff-indicator-left,
+.layoff-indicator-right {
+  width: 18px;
+  height: 38px;
+  border: 1.5px dashed #ffcc00;
+  border-radius: 3px;
+  background: rgba(255, 204, 0, 0.12);
+  color: #ffcc00;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-shadow: 0 0 6px rgba(255, 204, 0, 0.4);
+}
+
+.layoff-indicator-left.hover,
+.layoff-indicator-right.hover {
+  background: rgba(255, 204, 0, 0.4) !important;
+  color: #fff !important;
+  border-color: #ffea00 !important;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.85) !important;
+  transform: scale(1.05);
+}
